@@ -1,0 +1,330 @@
+// Core imports
+import { useState } from 'react';
+import { useLocation, useNavigate, NavLink, Outlet } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+
+// Icons from @heroicons/react/24/outline
+import {
+  HomeIcon,
+  UserGroupIcon,
+  ChartBarIcon,
+  Cog6ToothIcon as CogIcon,
+  QuestionMarkCircleIcon,
+  ArrowRightOnRectangleIcon as LogoutIcon,
+  DocumentTextIcon,
+  CalendarDaysIcon as CalendarIcon,
+  CurrencyRupeeIcon,
+  BanknotesIcon as CashIcon,
+  ChartPieIcon,
+  ChatBubbleLeftRightIcon as ChatAltIcon,
+  UserIcon,
+  TicketIcon,
+  BellIcon,
+  CreditCardIcon,
+  PlusCircleIcon,
+  ClockIcon,
+  ShieldCheckIcon,
+  UserCircleIcon,
+  PencilIcon,
+  KeyIcon,
+  Bars3Icon as MenuIcon,
+  XMarkIcon as XIcon,
+  SunIcon,
+  MoonIcon
+} from '@heroicons/react/24/outline';
+
+const Layout = () => {
+  const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  const getRoleBasedNavigation = () => {
+    const role = user?.role;
+    switch (role) {
+      case 'superAdmin':
+        return [
+          { name: 'Dashboard', path: '/super-admin/dashboard', icon: HomeIcon },
+          { name: 'System Health', path: '/super-admin/system-health', icon: ChartBarIcon },
+          { name: 'User Management', path: '/super-admin/user-management', icon: UserGroupIcon },
+          { name: 'Role Management', path: '/super-admin/role-management', icon: UserIcon },
+          { name: 'System Settings', path: '/super-admin/system-settings', icon: CogIcon },
+          { name: 'System Notifications', path: '/super-admin/system-notifications', icon: BellIcon },
+          { name: 'Performance Metrics', path: '/super-admin/performance-metrics', icon: ChartBarIcon },
+          { name: 'Financial Reports', path: '/super-admin/financial-reports', icon: DocumentTextIcon },
+          { name: 'User Analytics', path: '/super-admin/user-analytics', icon: UserGroupIcon },
+          { name: 'Reports', path: '/super-admin/reports', icon: DocumentTextIcon },
+          { name: 'Profile', path: '/super-admin/profile', icon: UserIcon },
+          { name: 'Settings', path: '/super-admin/settings', icon: CogIcon },
+          { name: 'Help', path: '/super-admin/help', icon: QuestionMarkCircleIcon },
+          { name: 'Feedback', path: '/super-admin/feedback', icon: ChatAltIcon },
+          { name: 'Logout', path: '/super-admin/logout', icon: LogoutIcon },
+        ];
+      case 'departmentHead':
+        return [
+          { name: 'Dashboard', path: '/department-head/dashboard', icon: HomeIcon },
+          { 
+            name: 'Staff Management',
+            path: '/department-head/staff',
+            icon: UserGroupIcon,
+            subItems: [
+              { name: 'Add New Staff', path: '/department-head/staff/add', icon: PlusCircleIcon },
+              { name: 'Staff Directory', path: '/department-head/staff/directory', icon: UserGroupIcon },
+              { name: 'Staff Notifications', path: '/department-head/staff/notifications', icon: BellIcon },
+            ]
+          },
+          { 
+            name: 'Reports & Analytics',
+            path: '/department-head/reports',
+            icon: DocumentTextIcon,
+            subItems: [
+              { name: 'Performance Metrics', path: '/department-head/performance', icon: ChartBarIcon },
+              { name: 'Financial Reports', path: '/department-head/financial-reports', icon: CurrencyRupeeIcon },
+              { name: 'Staff Analytics', path: '/department-head/staff/analytics', icon: ChartPieIcon },
+            ]
+          },
+          { name: 'Budget', path: '/department-head/budget', icon: CurrencyRupeeIcon },
+          { name: 'Profile', path: '/department-head/profile', icon: UserIcon },
+          { name: 'Manage Department Settings', path: '/department-head/manage-settings', icon: CogIcon },
+          { name: 'Settings', path: '/department-head/settings', icon: CogIcon },
+          { name: 'Help', path: '/department-head/help', icon: QuestionMarkCircleIcon },
+          { name: 'Feedback', path: '/department-head/feedback', icon: ChatAltIcon },
+          { name: 'Logout', path: '/department-head/logout', icon: LogoutIcon },
+        ];
+      case 'mandalHead':
+        return [
+          { name: 'Dashboard', path: '/mandal-head/dashboard', icon: HomeIcon },
+          { name: 'Performance', path: '/mandal-head/performance', icon: ChartBarIcon },
+          { name: 'Budget', path: '/mandal-head/budget', icon: CurrencyRupeeIcon },
+          { name: 'Staff', path: '/mandal-head/staff', icon: UserGroupIcon },
+          { name: 'Reports', path: '/mandal-head/reports', icon: DocumentTextIcon },
+          { name: 'Profile', path: '/mandal-head/profile', icon: UserIcon },
+          { name: 'Settings', path: '/mandal-head/settings', icon: CogIcon },
+          { name: 'Help', path: '/mandal-head/help', icon: QuestionMarkCircleIcon },
+          { name: 'Feedback', path: '/mandal-head/feedback', icon: ChatAltIcon },
+          { name: 'Logout', path: '/mandal-head/logout', icon: LogoutIcon },
+        ];
+      case 'branchManager':
+        return [
+          { name: 'Dashboard', path: '/branch-manager/dashboard', icon: HomeIcon },
+          { name: 'Performance', path: '/branch-manager/performance', icon: ChartBarIcon },
+          { name: 'Budget', path: '/branch-manager/budget', icon: CurrencyRupeeIcon },
+          { name: 'Staff', path: '/branch-manager/staff', icon: UserGroupIcon },
+          { name: 'Reports', path: '/branch-manager/reports', icon: DocumentTextIcon },
+          { name: 'Profile', path: '/branch-manager/profile', icon: UserIcon },
+          { name: 'Settings', path: '/branch-manager/settings', icon: CogIcon },
+          { name: 'Help', path: '/branch-manager/help', icon: QuestionMarkCircleIcon },
+          { name: 'Feedback', path: '/branch-manager/feedback', icon: ChatAltIcon },
+          { name: 'Logout', path: '/branch-manager/logout', icon: LogoutIcon },
+        ];
+      case 'agent':
+        return [
+          { name: 'Dashboard', path: '/agent/dashboard', icon: HomeIcon },
+          { name: 'Customer Management', path: '/agent/customer-management', icon: UserGroupIcon },
+          { name: 'Receipt Entry', path: '/agent/receipt-entry', icon: DocumentTextIcon },
+          { name: 'Referral Leaderboard', path: '/agent/referral-leaderboard', icon: ChartBarIcon },
+          { name: 'Meeting Management', path: '/agent/meeting-management', icon: CalendarIcon },
+          { name: 'Payment Entry', path: '/agent/payment-entry', icon: CurrencyRupeeIcon },
+          { name: 'Transaction History', path: '/agent/transaction-history', icon: CashIcon },
+          { name: 'Collection Reports', path: '/agent/collection-reports', icon: DocumentTextIcon },
+          { name: 'Performance Metrics', path: '/agent/performance-metrics', icon: ChartBarIcon },
+          { name: 'Analytics', path: '/agent/analytics', icon: ChartPieIcon },
+          { name: 'Meeting Notes', path: '/agent/meeting-notes', icon: DocumentTextIcon },
+          { name: 'Receipt Preview', path: '/agent/receipt-preview', icon: DocumentTextIcon },
+          { name: 'Customer Feedback', path: '/agent/customer-feedback', icon: ChatAltIcon },
+          { name: 'Profile', path: '/agent/profile', icon: UserIcon },
+          { name: 'Settings', path: '/agent/settings', icon: CogIcon },
+          { name: 'Help', path: '/agent/help', icon: QuestionMarkCircleIcon },
+          { name: 'Feedback', path: '/agent/feedback', icon: ChatAltIcon },
+          { name: 'Logout', path: '/agent/logout', icon: LogoutIcon },
+        ];
+      case 'customer':
+        return [
+          { name: 'Dashboard', path: '/customer/dashboard', icon: HomeIcon },
+          { 
+            name: 'Loan Management',
+            path: '/customer/loan-management',
+            icon: CreditCardIcon,
+            subItems: [
+              { name: 'Apply for Loan', path: '/customer/loan-application', icon: PlusCircleIcon },
+              { name: 'My Loans', path: '/customer/loans', icon: DocumentTextIcon },
+              { name: 'Loan Details', path: '/customer/loan-details', icon: DocumentTextIcon },
+              { name: 'Make Payment', path: '/customer/make-payment', icon: CurrencyRupeeIcon },
+              { name: 'View Statement', path: '/customer/view-statement', icon: DocumentTextIcon },
+              { name: 'Payment Reminders', path: '/customer/payment-reminders', icon: BellIcon },
+              { name: 'Repayment Schedule', path: '/customer/loan-repayment-schedule', icon: CalendarIcon },
+            ]
+          },
+          { 
+            name: 'Chit Groups',
+            path: '/customer/chit-groups',
+            icon: UserGroupIcon,
+            subItems: [
+              { name: 'My Groups', path: '/customer/my-chit-groups', icon: UserGroupIcon },
+              { name: 'All Groups', path: '/customer/chit-groups', icon: UserGroupIcon },
+              { name: 'Group Details', path: '/customer/chit-group-details', icon: DocumentTextIcon },
+              { name: 'Join Group', path: '/customer/join-chit-group', icon: PlusCircleIcon },
+              { name: 'Grabber History', path: '/customer/grabber-history', icon: ClockIcon },
+            ]
+          },
+          { 
+            name: 'Financial',
+            path: '/customer/financial',
+            icon: CurrencyRupeeIcon,
+            subItems: [
+              { name: 'Passbook', path: '/customer/passbook', icon: DocumentTextIcon },
+              { name: 'Wallet', path: '/customer/wallet-details', icon: CurrencyRupeeIcon },
+              { name: 'Transactions', path: '/customer/my-transactions', icon: CashIcon },
+              { name: 'Reports', path: '/customer/reports', icon: ChartBarIcon },
+            ]
+          },
+          { 
+            name: 'Meetings',
+            path: '/customer/meetings',
+            icon: CalendarIcon,
+            subItems: [
+              { name: 'My Meetings', path: '/customer/meetings', icon: UserIcon },
+              { name: 'Schedule Meeting', path: '/customer/meeting-schedule', icon: CalendarIcon },
+            ]
+          },
+          { name: 'Referral Dashboard', path: '/customer/referral-dashboard', icon: ChartBarIcon },
+          { name: 'Notifications', path: '/customer/notifications', icon: BellIcon },
+          { 
+            name: 'Support & Help',
+            path: '/customer/support',
+            icon: QuestionMarkCircleIcon,
+            subItems: [
+              { name: 'Help Center', path: '/customer/help', icon: QuestionMarkCircleIcon },
+              { name: 'FAQs', path: '/customer/faqs', icon: QuestionMarkCircleIcon },
+              { name: 'Contact Support', path: '/customer/contact-support', icon: ChatAltIcon },
+              { name: 'Feedback', path: '/customer/feedback', icon: ChatAltIcon },
+            ]
+          },
+          { name: 'Profile', path: '/customer/profile', icon: UserIcon },
+          { name: 'Settings', path: '/customer/settings', icon: CogIcon },
+          { name: 'Logout', path: '/customer/logout', icon: LogoutIcon },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const navigation = getRoleBasedNavigation();
+
+  return (
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      {/* Sidebar */}
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 transform transition-transform duration-300 ease-in-out ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between h-16 px-4 border-b dark:border-gray-700">
+          <h1 className="text-xl font-semibold text-gray-800 dark:text-white">
+            Mana Chit
+          </h1>
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="p-2 rounded-md text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300"
+          >
+            <XIcon className="w-6 h-6" />
+          </button>
+        </div>
+
+        <nav className="px-2 py-4 space-y-1">
+          {navigation.map((item) => (
+            <div key={item.path}>
+              <NavLink
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex items-center px-4 py-2 text-sm font-medium rounded-md ${
+                    isActive
+                      ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
+                  }`
+                }
+              >
+                <item.icon className="w-5 h-5 mr-3" />
+                {item.name}
+              </NavLink>
+              {item.subItems && (
+                <div className="ml-4 mt-1 space-y-1">
+                  {item.subItems.map((subItem) => (
+                    <NavLink
+                      key={subItem.path}
+                      to={subItem.path}
+                      className={({ isActive }) =>
+                        `flex items-center px-4 py-2 text-sm font-medium rounded-md ${
+                          isActive
+                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
+                        }`
+                      }
+                    >
+                      <subItem.icon className="w-5 h-5 mr-3" />
+                      {subItem.name}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </nav>
+      </div>
+
+      {/* Main Content */}
+      <div
+        className={`flex-1 transition-all duration-300 ${
+          isSidebarOpen ? 'ml-64' : 'ml-0'
+        }`}
+      >
+        {/* Top Navigation */}
+        <div className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
+          <div className="flex items-center justify-between h-16 px-4">
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 rounded-md text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300"
+            >
+              <MenuIcon className="w-6 h-6" />
+            </button>
+
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-md text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300"
+              >
+                {theme === 'dark' ? (
+                  <SunIcon className="w-6 h-6" />
+                ) : (
+                  <MoonIcon className="w-6 h-6" />
+                )}
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+              >
+                <LogoutIcon className="w-5 h-5 mr-2" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Page Content */}
+        <main className="p-4">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default Layout; 
