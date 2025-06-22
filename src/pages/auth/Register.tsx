@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import IdProofUpload from '../../components/IdProofUpload';
 
 const Register = () => {
-  const { register, error, isLoading, clearError } = useAuthStore();
+  const { register, error, isLoading } = useAuthStore();
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -73,7 +73,12 @@ const Register = () => {
     if (!isValid) return;
     
     try {
-      await register(formData);
+      await register({
+        ...formData,
+        idProof: formData.idProof
+          ? { type: formData.idType, verified: false, file: formData.idProof.name }
+          : undefined
+      });
       
       if (!error) {
         toast.success('Registration successful! Please verify OTP to continue.');

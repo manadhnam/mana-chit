@@ -98,7 +98,7 @@ export interface Meeting {
 export interface Notification {
   id: string;
   userId: string;
-  type: 'info' | 'success' | 'warning' | 'error';
+  type: 'info' | 'success' | 'warning' | 'error' | 'in_app';
   title: string;
   message: string;
   status: 'read' | 'unread';

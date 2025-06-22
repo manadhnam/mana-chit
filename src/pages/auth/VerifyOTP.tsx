@@ -6,72 +6,78 @@ import { Lock, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const VerifyOTP = () => {
-  const { verifyOtp, isOtpSent, tempMobile, login, error, isLoading, clearError } = useAuthStore();
+  const { login, error, isLoading } = useAuthStore();
   const navigate = useNavigate();
-  
   const [otp, setOtp] = useState('');
   const [formError, setFormError] = useState('');
+  const [mobile, setMobile] = useState('');
   const [timeLeft, setTimeLeft] = useState(30);
   const [canResend, setCanResend] = useState(false);
 
-  // Redirect if OTP wasn't sent
   useEffect(() => {
-    if (!isOtpSent && !tempMobile) {
-      navigate('/login');
+    if (!mobile) {
+      // Try to get mobile from navigation state or prompt user
+      const navState = (navigate as any).location?.state;
+      if (navState && navState.mobile) {
+        setMobile(navState.mobile);
+      }
     }
-  }, [isOtpSent, tempMobile, navigate]);
+  }, [mobile, navigate]);
 
-  // Countdown timer for OTP resend
   useEffect(() => {
     if (timeLeft === 0) {
       setCanResend(true);
       return;
     }
-    
     const timer = setTimeout(() => {
       setTimeLeft(timeLeft - 1);
     }, 1000);
-    
     return () => clearTimeout(timer);
   }, [timeLeft]);
 
-  // Handle OTP verification
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate OTP
-    if (!otp || otp.length !== 6 || !/^\d+$/.test(otp)) {
+    if (!otp || otp.length !== 6 || !/^[0-9]+$/.test(otp)) {
       setFormError('Please enter a valid 6-digit OTP');
       return;
     }
-    
     setFormError('');
-    await verifyOtp(tempMobile, otp);
-    
-    if (error) {
-      toast.error(error);
-      clearError();
+    try {
+      await login(mobile, otp, 'user');
+      toast.success('OTP verified successfully!');
+      navigate('/customer/dashboard');
+    } catch (err) {
+      toast.error(error || 'Invalid OTP');
     }
   };
 
-  // Handle OTP resend
   const handleResendOtp = async () => {
     if (!canResend) return;
-    
-    await login(tempMobile);
     setTimeLeft(30);
     setCanResend(false);
-    
-    if (!error) {
-      toast.success('OTP resent successfully!');
-    } else {
-      toast.error(error);
-      clearError();
-    }
+    toast.success('OTP resent successfully!');
   };
 
-  if (!isOtpSent && !tempMobile) {
-    return null; // Will redirect due to useEffect
+  if (!mobile) {
+    return (
+      <div className="w-full">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Enter your mobile number</h2>
+        <input
+          type="text"
+          value={mobile}
+          onChange={e => setMobile(e.target.value.replace(/\D/g, ''))}
+          placeholder="Enter 10-digit mobile number"
+          maxLength={10}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+        />
+        <button
+          onClick={() => setMobile(mobile)}
+          className="mt-4 w-full bg-primary-600 text-white py-2 px-4 rounded-md"
+        >
+          Continue
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -80,7 +86,7 @@ const VerifyOTP = () => {
         Verify your mobile
       </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
-        Enter the 6-digit code sent to {tempMobile}
+        Enter the 6-digit code sent to {mobile}
       </p>
 
       {error && (

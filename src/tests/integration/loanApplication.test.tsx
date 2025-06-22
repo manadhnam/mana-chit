@@ -125,7 +125,7 @@ describe('Loan Application Flow', () => {
     await waitFor(() => {
       expect(mockSendNotification).toHaveBeenCalledWith({
         userId: 'test-user-id',
-        type: 'IN_APP',
+        type: 'in_app',
         title: 'Loan Application Submitted',
         message: 'Your loan application has been submitted successfully.',
       });

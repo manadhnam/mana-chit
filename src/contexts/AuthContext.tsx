@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
+import type { UserRole } from '@/store/authStore';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: any | null;
-  login: (credentials: { email: string; password: string }) => Promise<void>;
+  login: (mobile: string, otp: string, role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
 }
@@ -27,10 +28,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
   }, [checkAuth]);
 
-  const login = async (credentials: { email: string; password: string }) => {
+  const login = async (mobile: string, otp: string, role: UserRole) => {
     setLoading(true);
     try {
-      await storeLogin(credentials);
+      await storeLogin(mobile, otp, role);
     } finally {
       setLoading(false);
     }

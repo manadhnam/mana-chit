@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { CreditCardIcon, CalendarIcon, HomeIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
 import { useAuthStore } from '@/store/authStore';
 

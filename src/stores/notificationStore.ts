@@ -3,7 +3,7 @@ import { devtools, persist } from 'zustand/middleware';
 
 export interface Notification {
   id: string;
-  type: 'info' | 'success' | 'warning' | 'error';
+  type: 'info' | 'success' | 'warning' | 'error' | 'in_app';
   title: string;
   message: string;
   link?: string;

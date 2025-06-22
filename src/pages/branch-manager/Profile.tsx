@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {ShieldCheckIcon as ShieldCheckIcon, BellIcon as BellIcon, ArrowLeftIcon as ArrowLeftIcon, UserIcon as UserIcon, CheckIcon as CheckIcon} from '@heroicons/react/24/outline';
-import { GlobeAltIcon as GlobeIcon } from '@heroicons/react/24/solid';
+import { GlobeAltIcon } from '@heroicons/react/24/outline';
 
 interface BranchManagerProfile {
   id: string;

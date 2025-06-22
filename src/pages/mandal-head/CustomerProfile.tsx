@@ -151,7 +151,7 @@ const CustomerProfile = () => {
         {
           id: '1',
           user_id: '1',
-          type: 'deposit',
+          type: 'wallet_deposit',
           amount: 10000,
           status: 'completed',
           created_at: '2024-01-01',
@@ -548,7 +548,7 @@ const CustomerProfile = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            transaction.type === 'deposit'
+                            transaction.type === 'wallet_deposit'
                               ? 'bg-green-100 text-green-800'
                               : 'bg-red-100 text-red-800'
                           }`}

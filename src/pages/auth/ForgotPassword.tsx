@@ -6,7 +6,7 @@ import { Phone, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ForgotPassword = () => {
-  const { login, error, isLoading, clearError } = useAuthStore();
+  const { login, error, isLoading } = useAuthStore();
   const navigate = useNavigate();
   
   const [mobile, setMobile] = useState('');
@@ -22,7 +22,7 @@ const ForgotPassword = () => {
     }
     
     setFormError('');
-    await login(mobile);
+    await login(mobile, '', 'user');
     
     if (!error) {
       toast.success('OTP sent successfully!');

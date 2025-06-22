@@ -109,12 +109,15 @@ const CustomerDetail = () => {
         branch_name: branchData.name,
         status: customerData.status,
         created_at: customerData.created_at,
-        groups: (groupMemberships || []).map(membership => ({
-          id: membership.chit_group_id,
-          name: chitGroupDetailsMap.get(membership.chit_group_id)?.name || 'Unknown Group',
-          status: chitGroupDetailsMap.get(membership.chit_group_id)?.status || 'inactive',
-          joined_date: membership.joined_date,
-        })),
+        groups: (groupMemberships || []).map(membership => {
+          const group = chitGroupDetailsMap.get(membership.chit_group_id);
+          return {
+            id: membership.chit_group_id,
+            name: group?.name || 'Unknown Group',
+            status: group?.status === 'active' ? 'active' : 'inactive',
+            joined_date: membership.joined_date,
+          };
+        }),
         payments: (paymentsData || []).map(payment => ({
           id: payment.id,
           amount: payment.amount,

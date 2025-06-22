@@ -231,7 +231,7 @@ export interface Notification {
   user_id: string;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
+  type: 'info' | 'success' | 'warning' | 'error' | 'in_app';
   read: boolean;
   created_at: string;
   updated_at: string;

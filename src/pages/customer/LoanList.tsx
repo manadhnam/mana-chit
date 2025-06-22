@@ -147,24 +147,13 @@ const MyLoans = () => {
                 </div>
                 <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                   <DocumentTextIcon className="h-5 w-5 mr-2" />
-                  <span>Duration: {loan.duration} months</span>
+                  <span>Duration: {loan.term} months</span>
                 </div>
                 <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                   <ClockIcon className="h-5 w-5 mr-2" />
                   <span>Interest: {loan.interestRate}%</span>
                 </div>
               </div>
-
-              {loan.nextPayment && (
-                <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    Next Payment: ₹{loan.nextPayment.amount.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Due: {new Date(loan.nextPayment.dueDate).toLocaleDateString('en-IN')}
-                  </p>
-                </div>
-              )}
 
               <div className="mt-6">
                 <Link

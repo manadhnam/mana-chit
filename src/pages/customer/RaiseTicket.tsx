@@ -1,4 +1,4 @@
-import {DocumentTextIcon, TicketIcon} from '@heroicons/react/24/outline';
+import {DocumentTextIcon, TicketIcon, PaperClipIcon, XMarkIcon} from '@heroicons/react/24/outline';
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
@@ -219,7 +219,7 @@ const RaiseTicket: React.FC = () => {
                       onClick={() => removeAttachment(index)}
                       className="text-gray-400 hover:text-gray-500"
                     >
-                      <XIcon className="h-5 w-5" />
+                      <XMarkIcon className="h-5 w-5" />
                     </button>
                   </div>
                 ))}
@@ -231,7 +231,7 @@ const RaiseTicket: React.FC = () => {
               <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <XIcon className="h-5 w-5 text-red-400" />
+                    <XMarkIcon className="h-5 w-5 text-red-400" />
                   </div>
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-red-800 dark:text-red-400">

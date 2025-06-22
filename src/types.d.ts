@@ -166,7 +166,7 @@ export interface Notification {
   userId: string;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
+  type: 'info' | 'success' | 'warning' | 'error' | 'in_app';
   read: boolean;
   status?: 'read' | 'unread';
   createdAt: string;

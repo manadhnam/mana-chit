@@ -117,7 +117,7 @@ const LoanApplication = ({ userId, onApplicationComplete }: LoanApplicationProps
 
       await createNotification({
         userId,
-        type: 'IN_APP',
+        type: 'in_app',
         title: 'Loan Application Submitted',
         message: 'Your loan application has been submitted successfully.',
       });

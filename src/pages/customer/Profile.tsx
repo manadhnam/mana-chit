@@ -42,8 +42,33 @@ const Profile = () => {
     setIsLoading(true);
     // Simulate API call
     setTimeout(() => {
-      setProfile(user as CustomerProfile);
-      setFormData(user as Partial<CustomerProfile>);
+      if (user) {
+        setProfile({
+          id: user.id || '',
+          name: user.name || '',
+          email: user.email || '',
+          mobile: user.mobile || '',
+          address: user.address || '',
+          aadharNumber: '',
+          panNumber: '',
+          profileImage: '',
+          kycStatus: 'pending',
+          kycDocuments: {},
+          accountSummary: {
+            totalLoans: 0,
+            activeLoans: 0,
+            totalChitGroups: 0,
+            activeChitGroups: 0,
+          },
+        });
+        setFormData({
+          id: user.id || '',
+          name: user.name || '',
+          email: user.email || '',
+          mobile: user.mobile || '',
+          address: user.address || '',
+        });
+      }
       setIsLoading(false);
     }, 1000);
   }, [user]);

@@ -106,7 +106,8 @@ export default defineConfig(({ command, mode }) => {
                 }
               }
             }
-          ]
+          ],
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
         },
         devOptions: {
           enabled: true,

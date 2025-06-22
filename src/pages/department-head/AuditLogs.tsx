@@ -1,5 +1,5 @@
 import AuditLogs from '@/components/audit/AuditLogs';
 
-const DepartmentHeadAuditLogs = () => <AuditLogs role="departmentHead" />;
+const DepartmentHeadAuditLogs = () => <AuditLogs />;
 
 export default DepartmentHeadAuditLogs; 

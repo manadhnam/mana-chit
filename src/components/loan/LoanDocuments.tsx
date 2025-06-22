@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DocumentCheckIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon, ArrowUpIcon, DocumentIcon } from '@heroicons/react/24/outline';
 
 
 interface Document {
@@ -104,9 +105,9 @@ const LoanDocuments = ({ loanId, userId }: LoanDocumentsProps) => {
       case 'VERIFIED':
         return <DocumentCheckIcon className="h-6 w-6 text-green-500" />;
       case 'REJECTED':
-        return <DocumentXMarkIcon className="h-6 w-6 text-red-500" />;
+        return <XMarkIcon className="h-6 w-6 text-red-500" />;
       case 'PENDING':
-        return <DocumentArrowUpIcon className="h-6 w-6 text-yellow-500" />;
+        return <ArrowUpIcon className="h-6 w-6 text-yellow-500" />;
       default:
         return <DocumentIcon className="h-6 w-6 text-gray-500" />;
     }

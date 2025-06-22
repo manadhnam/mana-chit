@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNotification } from '@/hooks/useNotification';
 
 const SuperAdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { addNotification } = useNotification();
+  const { login } = useAuth();
 
   const from = location.state?.from?.pathname || '/super-admin/dashboard';
 
@@ -21,21 +19,11 @@ const SuperAdminLogin: React.FC = () => {
     setError('');
 
     try {
-      await signIn(email, password, 'super_admin');
+      await login(email, password, 'superAdmin');
       navigate(from, { replace: true });
-      addNotification({
-        type: 'success',
-        message: 'Successfully logged in as Super Admin!',
-        duration: 3000
-      });
     } catch (err) {
       setError('Failed to sign in. Please check your credentials.');
       console.error('Login error:', err);
-      addNotification({
-        type: 'error',
-        message: 'Failed to login. Please check your credentials.',
-        duration: 5000
-      });
     } finally {
       setLoading(false);
     }

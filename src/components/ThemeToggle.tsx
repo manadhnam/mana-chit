@@ -1,4 +1,4 @@
-
+import React from 'react';
 import { Sun, Moon } from 'lucide-react';
 
 // This is a placeholder component. A full implementation would

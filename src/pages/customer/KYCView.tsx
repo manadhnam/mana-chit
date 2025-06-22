@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircleIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/solid';
+import { ArrowLeftIcon, DocumentIcon } from '@heroicons/react/24/outline';
 
 
 interface KYCInfo {

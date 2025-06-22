@@ -71,7 +71,7 @@ const StaffManagement = () => {
     await supabase.from('audit_logs').insert({ action: 'add_staff', details: { name, position, joining_date, status, fileInfo } });
     // TODO: Insert staff into DB (mock for now)
     setStaff(prev => [
-      { id: Date.now().toString(), user_id: name, department_id: '', position, joining_date, salary: 0, status, created_at: joining_date, updated_at: joining_date },
+      { id: Date.now().toString(), user_id: name, department_id: '', position, joining_date, salary: 0, status: (['active','inactive','on_leave','pending'].includes(status) ? status : 'pending') as 'active' | 'inactive' | 'on_leave' | 'pending', created_at: joining_date, updated_at: joining_date },
       ...prev
     ]);
     toast.success('Staff added successfully!');

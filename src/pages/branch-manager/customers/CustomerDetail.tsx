@@ -99,7 +99,7 @@ const CustomerDetail = () => {
         groups: (groupMemberships || []).map(membership => ({
           id: membership.chit_group_id,
           name: chitGroupDetailsMap.get(membership.chit_group_id)?.name || 'Unknown Group',
-          status: chitGroupDetailsMap.get(membership.chit_group_id)?.status || 'inactive',
+          status: (chitGroupDetailsMap.get(membership.chit_group_id)?.status as 'active' | 'inactive') || 'inactive',
           joined_date: membership.joined_date,
         })),
         payments: (paymentsData || []).map(payment => ({

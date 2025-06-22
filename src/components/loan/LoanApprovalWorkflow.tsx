@@ -32,7 +32,7 @@ const LoanApprovalWorkflow = ({ loanId, userId, onApprovalComplete }: LoanApprov
       await approveLoan(currentApproval.id, comments);
       await createNotification({
         userId,
-        type: 'IN_APP',
+        type: 'in_app',
         title: 'Loan Approved',
         message: `Your loan has been approved at ${currentApproval.level} level.`,
       });
@@ -58,7 +58,7 @@ const LoanApprovalWorkflow = ({ loanId, userId, onApprovalComplete }: LoanApprov
       await rejectLoan(currentApproval.id, comments);
       await createNotification({
         userId,
-        type: 'IN_APP',
+        type: 'in_app',
         title: 'Loan Rejected',
         message: `Your loan has been rejected at ${currentApproval.level} level.`,
       });

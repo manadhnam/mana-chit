@@ -44,6 +44,14 @@ const CustomerRegistration = () => {
     }));
   };
 
+  const handleTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   const handleOtpChange = (index: number, value: string) => {
     if (value.length <= 1) {
       const newOtp = [...otp];
@@ -375,7 +383,7 @@ const CustomerRegistration = () => {
               <textarea
                 name="address"
                 value={formData.address}
-                onChange={handleInputChange}
+                onChange={handleTextAreaChange}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 required

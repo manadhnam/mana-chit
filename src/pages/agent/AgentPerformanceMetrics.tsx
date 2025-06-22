@@ -1,5 +1,5 @@
 import {UserGroupIcon, ClockIcon, CalendarIcon} from '@heroicons/react/24/outline';
-import { ChartBarIcon, BanknotesIcon } from '@heroicons/react/24/solid';
+import { ChartBarIcon, BanknotesIcon, ArrowTrendingDownIcon } from '@heroicons/react/24/solid';
 import React, { useState } from 'react';
 
 
@@ -21,6 +21,7 @@ interface Goal {
   current: number;
   deadline: string;
   status: 'on_track' | 'at_risk' | 'completed';
+  unit: string;
 }
 
 const mockMetrics: PerformanceMetric[] = [
@@ -75,6 +76,7 @@ const mockGoals: Goal[] = [
     current: 25,
     deadline: '2024-03-31',
     status: 'on_track',
+    unit: '',
   },
   {
     id: '2',
@@ -84,6 +86,7 @@ const mockGoals: Goal[] = [
     current: 4.5,
     deadline: '2024-03-31',
     status: 'at_risk',
+    unit: '',
   },
   {
     id: '3',
@@ -93,6 +96,7 @@ const mockGoals: Goal[] = [
     current: 300000,
     deadline: '2024-03-31',
     status: 'at_risk',
+    unit: '₹',
   },
 ];
 
@@ -172,7 +176,7 @@ const AgentPerformanceMetrics: React.FC = () => {
               {metric.trend === 'up' ? (
                 <ChartBarIcon className="h-5 w-5 mr-2" />
               ) : (
-                <TrendingDownIcon className="h-5 w-5 text-red-500" />
+                <ArrowTrendingDownIcon className="h-5 w-5 text-red-500" />
               )}
             </div>
             <div className="space-y-4">

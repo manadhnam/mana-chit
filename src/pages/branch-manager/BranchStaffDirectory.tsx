@@ -1,4 +1,4 @@
-import {UserGroupIcon, PhoneIcon, EnvelopeIcon, ClockIcon, MagnifyingGlassIcon} from '@heroicons/react/24/outline';
+import {UserGroupIcon, PhoneIcon, EnvelopeIcon, ClockIcon, MagnifyingGlassIcon, UserCircleIcon} from '@heroicons/react/24/outline';
 import React, { useState } from 'react';
 
 

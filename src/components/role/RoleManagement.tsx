@@ -17,7 +17,7 @@ interface RoleManagementProps {
 }
 
 const RoleManagement = ({ onRoleSelect }: RoleManagementProps) => {
-  const { roles, fetchRoles, updateRolePermissions, isLoading, error } = useRoleStore();
+  const { roles, fetchRoles, assignPermissions, permissions, isLoading } = useRoleStore();
   const { logAction } = useAuditStore();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -31,7 +31,7 @@ const RoleManagement = ({ onRoleSelect }: RoleManagementProps) => {
     if (selectedRole) {
       const role = roles.find(r => r.id === selectedRole);
       if (role) {
-        setEditedPermissions(role.permissions.map(p => p.id));
+        setEditedPermissions(role.permissions);
       }
     }
   }, [selectedRole, roles]);
@@ -60,13 +60,8 @@ const RoleManagement = ({ onRoleSelect }: RoleManagementProps) => {
 
   const handleSavePermissions = async () => {
     if (!selectedRole) return;
-
     try {
-      const role = roles.find(r => r.id === selectedRole);
-      if (!role) return;
-
-      const permissions = role.permissions.filter(p => editedPermissions.includes(p.id));
-      await updateRolePermissions(selectedRole, permissions);
+      await assignPermissions(selectedRole, editedPermissions);
       setIsEditing(false);
       logAction({
         userId: 'admin', // This should be replaced with actual user ID
@@ -86,20 +81,6 @@ const RoleManagement = ({ onRoleSelect }: RoleManagementProps) => {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-        <div className="flex">
-          <ExclamationCircleIcon className="h-5 w-5 text-red-400" />
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error</h3>
-            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-          </div>
-        </div>
       </div>
     );
   }
@@ -136,14 +117,14 @@ const RoleManagement = ({ onRoleSelect }: RoleManagementProps) => {
                   <UserGroupIcon className="h-5 w-5 text-gray-400" />
                   <div className="ml-3">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">{role.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Level {role.level}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{role.description}</p>
                   </div>
                 </div>
                 <div className="flex space-x-2">
                   <button
                     type="button"
                     className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation();
                       setIsEditing(true);
                     }}
@@ -153,7 +134,7 @@ const RoleManagement = ({ onRoleSelect }: RoleManagementProps) => {
                   <button
                     type="button"
                     className="text-gray-400 hover:text-red-500 dark:hover:text-red-400"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={e => e.stopPropagation()}
                   >
                     <TrashIcon className="h-4 w-4" />
                   </button>
@@ -185,7 +166,7 @@ const RoleManagement = ({ onRoleSelect }: RoleManagementProps) => {
                     setIsEditing(false);
                     const role = roles.find(r => r.id === selectedRole);
                     if (role) {
-                      setEditedPermissions(role.permissions.map(p => p.id));
+                      setEditedPermissions(role.permissions);
                     }
                   }}
                 >
@@ -202,51 +183,21 @@ const RoleManagement = ({ onRoleSelect }: RoleManagementProps) => {
               </button>
             )}
           </div>
-          {(() => {
-            const role = roles.find(r => r.id === selectedRole);
-            if (!role) return null;
-
-            const modules = Array.from(new Set(role.permissions.map(p => p.module)));
-
-            return (
-              <div className="space-y-6">
-                {modules.map((module) => (
-                  <div key={module} className="space-y-2">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">{module}</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {role.permissions
-                        .filter(p => p.module === module)
-                        .map((permission) => (
-                          <div
-                            key={permission.id}
-                            className={`p-4 border rounded-lg ${
-                              isEditing ? 'cursor-pointer' : ''
-                            } ${
-                              editedPermissions.includes(permission.id)
-                                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                                : 'border-gray-200 dark:border-gray-700'
-                            }`}
-                            onClick={() => isEditing && handlePermissionToggle(permission.id)}
-                          >
-                            <div className="flex items-center">
-                              <ShieldCheckIcon className="h-5 w-5 text-gray-400" />
-                              <div className="ml-3">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                  {permission.name}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {permission.description}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {permissions.map(permission => (
+              <div key={permission.id} className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={editedPermissions.includes(permission.id)}
+                  onChange={() => handlePermissionToggle(permission.id)}
+                  disabled={!isEditing}
+                  className="mr-2"
+                />
+                <span className="text-sm text-gray-900 dark:text-white font-medium">{permission.name}</span>
+                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{permission.description}</span>
               </div>
-            );
-          })()}
+            ))}
+          </div>
         </div>
       )}
     </div>
