@@ -22,6 +22,7 @@ import QRManagement from '../pages/super-admin/QRManagement';
 import AIRiskAnalytics from '../pages/super-admin/AIRiskAnalytics';
 import FreezeAccounts from '../pages/super-admin/FreezeAccounts';
 import WhatsAppBot from '../pages/super-admin/WhatsAppBot';
+import { BlogManagement } from '../pages/super-admin/BlogManagement';
 
 // Mandal Head Pages
 import MandalDashboard from '../pages/mandal-head/Dashboard';
@@ -52,10 +53,14 @@ import Passbook from '../pages/customer/Passbook';
 import CustomerReminders from '../pages/customer/Reminders';
 import CustomerReceiptDownload from '../pages/customer/ReceiptDownload';
 
+import { EligibilityPage } from '../pages/EligibilityPage';
+import BlogPage from '@/pages/public/blog/BlogPage';
+import BlogPostPage from '@/pages/public/blog/BlogPostPage';
+
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <AppLayout showSidebar={false} showHeader={false} />,
+    element: <AppLayout showHeader={false} />,
     children: [
       { index: true, element: <LandingPage /> },
       { path: 'unauthorized', element: <Unauthorized /> },
@@ -83,6 +88,7 @@ const router = createBrowserRouter([
       { path: 'ai-risk-analytics', element: <AIRiskAnalytics /> },
       { path: 'freeze-accounts', element: <FreezeAccounts /> },
       { path: 'whatsapp-bot', element: <WhatsAppBot /> },
+      { path: 'blog-management', element: <BlogManagement /> },
     ],
   },
   {
@@ -137,6 +143,18 @@ const router = createBrowserRouter([
       { path: 'freeze-accounts', element: <div>Freeze Accounts</div> },
       { path: 'whatsapp-bot', element: <div>WhatsApp Bot</div> },
     ],
+  },
+  {
+    path: '/eligibility',
+    element: <EligibilityPage />,
+  },
+  {
+    path: '/blog',
+    element: <BlogPage />,
+  },
+  {
+    path: '/blog/:slug',
+    element: <BlogPostPage />,
   },
 ]);
 

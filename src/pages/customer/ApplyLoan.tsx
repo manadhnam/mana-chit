@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { CreditCardIcon, CalendarIcon, HomeIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
-
 import { useAuthStore } from '@/store/authStore';
+import { supabase } from '@/lib/supabase';
 
 interface LoanApplication {
   chitGroupId: string;
@@ -16,10 +16,17 @@ interface LoanApplication {
   documents: File[];
 }
 
+interface ChitGroup {
+  id: string;
+  name: string;
+  chit_value: number;
+}
+
 const LoanApplication = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [availableChitGroups, setAvailableChitGroups] = useState<ChitGroup[]>([]);
   const [formData, setFormData] = useState<LoanApplication>({
     chitGroupId: '',
     amount: 0,
@@ -30,11 +37,40 @@ const LoanApplication = () => {
     documents: [],
   });
 
-  // Mock data - replace with API call
-  const availableChitGroups = [
-    { id: '1', name: 'Monthly Savings Group A', amount: 10000 },
-    { id: '2', name: 'Quarterly Investment Group B', amount: 50000 },
-  ];
+  useEffect(() => {
+    const fetchChitGroups = async () => {
+      if (!user) return;
+      try {
+        // Step 1: Get the IDs of the chit groups the customer is in
+        const { data: memberData, error: memberError } = await supabase
+          .from('chit_group_members')
+          .select('chit_group_id')
+          .eq('customer_id', user.id);
+
+        if (memberError) throw memberError;
+
+        const groupIds = memberData.map(m => m.chit_group_id);
+
+        if (groupIds.length === 0) {
+          setAvailableChitGroups([]);
+          return;
+        }
+
+        // Step 2: Fetch the details of those chit groups
+        const { data: groupData, error: groupError } = await supabase
+          .from('chit_groups')
+          .select('id, name, chit_value')
+          .in('id', groupIds);
+
+        if (groupError) throw groupError;
+
+        setAvailableChitGroups(groupData || []);
+      } catch (error) {
+        toast.error("Could not load your chit groups.");
+      }
+    };
+    fetchChitGroups();
+  }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -55,16 +91,33 @@ const LoanApplication = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !user.branch_id) {
+      toast.error('Could not verify user information. Please re-login.');
+      return;
+    }
     setIsLoading(true);
 
     try {
-      // Mock API call - replace with actual API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // TODO: Handle document uploads to Supabase storage
       
+      const { data, error } = await supabase.from('loans').insert({
+        customer_id: user.id,
+        branch_id: user.branch_id,
+        chit_group_id: formData.chitGroupId,
+        amount: formData.amount,
+        purpose: formData.purpose,
+        duration_months: formData.duration,
+        monthly_income: formData.monthlyIncome,
+        employment_type: formData.employmentType,
+        status: 'pending_approval',
+      }).select().single();
+
+      if (error) throw error;
+
       toast.success('Loan application submitted successfully!');
-      navigate('/user/loan-status');
-    } catch (error) {
-      toast.error('Failed to submit loan application. Please try again.');
+      navigate('/customer/loans');
+    } catch (error: any) {
+      toast.error('Failed to submit loan application: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -106,7 +159,7 @@ const LoanApplication = () => {
               <option value="">Select a chit group</option>
               {availableChitGroups.map(group => (
                 <option key={group.id} value={group.id}>
-                  {group.name} (₹{group.amount.toLocaleString()})
+                  {group.name} (Value: ₹{group.chit_value.toLocaleString()})
                 </option>
               ))}
             </select>

@@ -1,8 +1,8 @@
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { UserPlusIcon } from '@heroicons/react/24/solid';
-import React, { useState } from 'react';
-
-
+import React, { useState, useEffect } from 'react';
+import { useAuthStore } from '@/store/authStore';
+import { supabase } from '@/lib/supabaseClient';
 
 interface NewStaffMember {
   firstName: string;
@@ -29,9 +29,23 @@ const initialFormData: NewStaffMember = {
 };
 
 const AddNewStaff = () => {
+  const { user } = useAuthStore();
   const [formData, setFormData] = useState<NewStaffMember>(initialFormData);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [department, setDepartment] = useState('');
+
+  useEffect(() => {
+    // Fetch department from Department Head's profile
+    const fetchDepartment = async () => {
+      if (user?.department_id) {
+        const { data } = await supabase.from('departments').select('name').eq('id', user.department_id).single();
+        if (data) setDepartment(data.name);
+        setFormData(prev => ({ ...prev, department: user.department_id || '' }));
+      }
+    };
+    fetchDepartment();
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -44,13 +58,21 @@ const AddNewStaff = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      setSuccess(true);
-      setFormData(initialFormData);
-      setTimeout(() => setSuccess(false), 3000);
-    }, 1500);
+    // Save staff with department assignment
+    await supabase.from('users').insert({
+      name: `${formData.firstName} ${formData.lastName}`,
+      email: formData.email,
+      mobile: formData.phone,
+      role: formData.role,
+      department_id: user?.department_id,
+      status: formData.status,
+      join_date: formData.joinDate,
+      salary: formData.salary
+    });
+    setLoading(false);
+    setSuccess(true);
+    setFormData(initialFormData);
+    setTimeout(() => setSuccess(false), 3000);
   };
 
   return (
@@ -74,7 +96,6 @@ const AddNewStaff = () => {
             {/* Personal Information */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold mb-4">Personal Information</h2>
-              
               <div>
                 <label className="block text-sm font-medium mb-1">First Name</label>
                 <input
@@ -86,7 +107,6 @@ const AddNewStaff = () => {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Last Name</label>
                 <input
@@ -98,7 +118,6 @@ const AddNewStaff = () => {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Email</label>
                 <input
@@ -110,7 +129,6 @@ const AddNewStaff = () => {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Phone</label>
                 <input
@@ -123,11 +141,9 @@ const AddNewStaff = () => {
                 />
               </div>
             </div>
-
             {/* Employment Details */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold mb-4">Employment Details</h2>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Role</label>
                 <select
@@ -138,30 +154,21 @@ const AddNewStaff = () => {
                   required
                 >
                   <option value="">Select Role</option>
-                  <option value="developer">Developer</option>
-                  <option value="designer">Designer</option>
-                  <option value="manager">Manager</option>
-                  <option value="analyst">Analyst</option>
+                  <option value="agent">Agent</option>
+                  <option value="staff">Staff</option>
                 </select>
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Department</label>
-                <select
+                <input
+                  type="text"
                   name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  className="w-full rounded border px-3 py-2 dark:bg-gray-900 dark:border-gray-700"
+                  value={department}
+                  disabled
+                  className="w-full rounded border px-3 py-2 dark:bg-gray-900 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
                   required
-                >
-                  <option value="">Select Department</option>
-                  <option value="engineering">Engineering</option>
-                  <option value="design">Design</option>
-                  <option value="marketing">Marketing</option>
-                  <option value="sales">Sales</option>
-                </select>
+                />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Join Date</label>
                 <input
@@ -173,7 +180,6 @@ const AddNewStaff = () => {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Salary</label>
                 <input
@@ -186,7 +192,6 @@ const AddNewStaff = () => {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">Status</label>
                 <select
@@ -202,21 +207,16 @@ const AddNewStaff = () => {
               </div>
             </div>
           </div>
-
-          <div className="mt-8 flex items-center gap-4">
+          <div className="mt-6 flex justify-end">
             <button
               type="submit"
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               disabled={loading}
-              className="rounded bg-blue-600 px-6 py-2 font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-60"
             >
-              {loading ? 'Adding Staff...' : 'Add Staff Member'}
+              {loading ? 'Saving...' : 'Save Staff'}
             </button>
-            {success && (
-              <span className="text-green-600 font-medium">
-                Staff member added successfully!
-              </span>
-            )}
           </div>
+          {success && <div className="mt-4 text-green-600">Staff member added successfully!</div>}
         </div>
       </form>
     </div>

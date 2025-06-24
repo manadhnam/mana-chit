@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '@/store/authStore';
 
 const NewCustomer = () => {
   const navigate = useNavigate();
@@ -26,6 +27,17 @@ const NewCustomer = () => {
     nomineeRelation: ''
   });
 
+  const { user } = useAuthStore();
+  const branchId = user?.branch_id;
+
+  if (!branchId) {
+    return (
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+        {/* ... */}
+      </div>
+    );
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -42,7 +54,7 @@ const NewCustomer = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="mb-8">
         <button
           onClick={() => navigate('/branch-manager/dashboard')}

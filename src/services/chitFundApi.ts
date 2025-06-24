@@ -6,7 +6,7 @@ import jsPDF from 'jspdf';
 export async function requestLoan(userId: string, groupId: string): Promise<{ success: boolean; error?: string }> {
   // Check for existing approved loan in last 30 days
   const { data: loans, error: loanError } = await supabase
-    .from('loan_requests')
+    .from('loans')
     .select('requested_on, status')
     .eq('user_id', userId)
     .eq('group_id', groupId)
@@ -25,7 +25,7 @@ export async function requestLoan(userId: string, groupId: string): Promise<{ su
     }
   }
   // Insert new loan request
-  const { error } = await supabase.from('loan_requests').insert([
+  const { error } = await supabase.from('loans').insert([
     {
       user_id: userId,
       group_id: groupId,
@@ -57,7 +57,7 @@ export async function manualPayment(data: {
     const { data: publicUrlData } = supabase.storage.from('manual-payments').getPublicUrl(filePath);
     screenshotUrl = publicUrlData?.publicUrl;
   }
-  const { error } = await supabase.from('payments').insert([
+  const { error } = await supabase.from('collections').insert([
     {
       user_id: data.userId,
       group_id: data.groupId,
@@ -77,7 +77,7 @@ export async function manualPayment(data: {
 export async function generateReceipt(paymentId: string, issuedBy: string): Promise<{ receiptUrl: string; error?: string }> {
   // Fetch payment details
   const { data: payment, error: paymentError } = await supabase
-    .from('payments')
+    .from('collections')
     .select('id, user_id, group_id, amount, mode, paid_on, fine')
     .eq('id', paymentId)
     .single();
@@ -106,7 +106,7 @@ export async function generateReceipt(paymentId: string, issuedBy: string): Prom
   const receiptUrl = publicUrlData?.publicUrl;
 
   // Insert into receipts table
-  const { error: insertError } = await supabase.from('receipts').insert([
+  const { error: insertError } = await supabase.from('collections').insert([
     {
       payment_id: payment.id,
       issued_by: issuedBy,
@@ -130,7 +130,7 @@ export async function updateRiskLevel(): Promise<{ updated: number; error?: stri
   for (const user of users) {
     // Fetch payment history
     const { data: payments, error: paymentsError } = await supabase
-      .from('payments')
+      .from('collections')
       .select('fine, paid_on')
       .eq('user_id', user.id)
       .order('paid_on', { ascending: false });
@@ -169,7 +169,7 @@ export async function updateRiskLevel(): Promise<{ updated: number; error?: stri
 export async function sendReminders(): Promise<{ sent: number; error?: string }> {
   // Find overdue payments (fine > 0 or paid_on > 15th)
   const { data: payments, error: paymentsError } = await supabase
-    .from('payments')
+    .from('collections')
     .select('user_id, paid_on, fine')
     .gt('fine', 0);
   if (paymentsError) return { sent: 0, error: paymentsError.message };
@@ -199,7 +199,7 @@ export async function sendReminders(): Promise<{ sent: number; error?: string }>
 export async function agentPerformance(agentId: string): Promise<{ performance: any; error?: string }> {
   // Fetch total collections and missed collections
   const { data: payments, error: paymentsError } = await supabase
-    .from('payments')
+    .from('collections')
     .select('id, paid_on')
     .eq('agent_id', agentId);
   if (paymentsError) return { performance: null, error: paymentsError.message };
@@ -264,7 +264,7 @@ export async function attendancePunchIn(data: {
 export async function branchSummary(branchId: string): Promise<{ summary: any; riskUsers: any[]; error?: string }> {
   // Fetch payments for the branch
   const { data: payments, error: paymentsError } = await supabase
-    .from('payments')
+    .from('collections')
     .select('id, user_id, fine, paid_on')
     .eq('group_id', branchId); // Assuming group_id is used for branch; adjust if needed
   if (paymentsError) return { summary: null, riskUsers: [], error: paymentsError.message };
@@ -330,7 +330,7 @@ export async function getUserGroup(userId: string) {
 
   // Get group info
   const { data: group, error: groupError } = await supabase
-    .from('groups')
+    .from('chit_groups')
     .select('*')
     .eq('id', user.group_id)
     .single();
@@ -340,7 +340,7 @@ export async function getUserGroup(userId: string) {
 // Fetch user's passbook (payment history)
 export async function getUserPassbook(userId: string) {
   const { data, error } = await supabase
-    .from('payments')
+    .from('collections')
     .select('paid_on, amount, fine, id, receipt:receipts(receipt_url)')
     .eq('user_id', userId)
     .order('paid_on', { ascending: false });
@@ -359,7 +359,7 @@ export async function getUserPassbook(userId: string) {
 export async function getUserLoanStatus(userId: string) {
   // Get last loan
   const { data, error } = await supabase
-    .from('loan_requests')
+    .from('loans')
     .select('requested_on, status')
     .eq('user_id', userId)
     .order('requested_on', { ascending: false })
@@ -422,7 +422,7 @@ export async function getAdminAnalytics({ branchId, from, to }: { branchId?: str
   };
 
   // Payments filter
-  let paymentsQuery = supabase.from('payments').select('amount, fine, paid_on, user_id, agent_id, group_id, branch_id, mandal_id');
+  let paymentsQuery = supabase.from('collections').select('amount, fine, paid_on, user_id, agent_id, group_id, branch_id, mandal_id');
   if (branchId) paymentsQuery = paymentsQuery.eq('branch_id', branchId);
   if (from) paymentsQuery = paymentsQuery.gte('paid_on', from);
   if (to) paymentsQuery = paymentsQuery.lte('paid_on', to);
@@ -434,7 +434,7 @@ export async function getAdminAnalytics({ branchId, from, to }: { branchId?: str
   const users = await safeQuery(usersQuery);
 
   // Groups
-  const groups = await safeQuery(supabase.from('groups').select('id, name, amount, branch_id, mandal_id'));
+  const groups = await safeQuery(supabase.from('chit_groups').select('id, name, amount, branch_id, mandal_id'));
 
   // Branches
   const branches = await safeQuery(supabase.from('branches').select('id, name, mandal_id'));
@@ -443,7 +443,7 @@ export async function getAdminAnalytics({ branchId, from, to }: { branchId?: str
   const mandals = await safeQuery(supabase.from('mandals').select('id, name'));
 
   // Loans
-  let loansQuery = supabase.from('loan_requests').select('id, status, requested_on, user_id, group_id');
+  let loansQuery = supabase.from('loans').select('id, status, requested_on, user_id, group_id');
   if (branchId) loansQuery = loansQuery.eq('group_id', branchId);
   if (from) loansQuery = loansQuery.gte('requested_on', from);
   if (to) loansQuery = loansQuery.lte('requested_on', to);
@@ -653,4 +653,46 @@ export async function sendWhatsAppMessage({
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to send WhatsApp message' };
   }
+}
+
+async function getBranchPerformance(branchId: string) {
+  const { data, error } = await supabase
+    .from('collections')
+    .select('amount, fine')
+    .eq('branch_id', branchId);
+  // ... existing code ...
+}
+
+async function getBranchStaff(branchId: string) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, name, role')
+    .eq('branch_id', branchId)
+    // ... existing code ...
+    .in('role', ['agent', 'branchManager']);
+  return { data, error };
+}
+
+async function getBranchLoans(branchId: string) {
+  const { data, error } = await supabase
+    .from('loans')
+    .select('id, amount, status')
+    .eq('branch_id', branchId);
+  // ... existing code ...
+}
+
+async function getBranchCustomers(branchId: string) {
+  const { data, error } = await supabase
+    .from('customers')
+    .select('id, name, created_at')
+    .eq('branch_id', branchId);
+  // ... existing code ...
+}
+
+async function getBranchGroups(branchId: string) {
+  const { data, error } = await supabase
+    .from('chit_groups')
+    .select('id, name, amount')
+    .eq('branch_id', branchId);
+  // ... existing code ...
 } 

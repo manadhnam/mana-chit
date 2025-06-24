@@ -49,11 +49,11 @@ const ReceiptEntry = () => {
   const { user } = useAuthStore();
 
   const fetchAgentData = async () => {
-    if (!user || !user.branchId) return;
+    if (!user || !user.branch_id) return;
     setLoading(true);
     try {
       const [customerRes, receiptRes] = await Promise.all([
-        supabase.from('customers').select('*').eq('branch_id', user.branchId),
+        supabase.from('customers').select('*').eq('branch_id', user.branch_id),
         supabase.from('receipts').select('*').eq('created_by', user.id).order('created_at', { ascending: false }),
       ]);
 
@@ -84,7 +84,7 @@ const ReceiptEntry = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCustomer || !paymentAmount || !user || !user.branchId) {
+    if (!selectedCustomer || !paymentAmount || !user || !user.branch_id) {
       toast.error('Please select a customer and enter a payment amount.');
       return;
     }
@@ -119,7 +119,7 @@ const ReceiptEntry = () => {
         notes,
         customer_signature_url: customerSignatureUrl,
         created_by: user.id,
-        branch_id: user.branchId,
+        branch_id: user.branch_id,
       };
 
       toast.loading('Saving receipt details...', { id: toastId });

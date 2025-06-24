@@ -48,7 +48,7 @@ const Profile = () => {
           name: user.name || '',
           email: user.email || '',
           mobile: user.mobile || '',
-          address: user.address || '',
+          address: '',
           aadharNumber: '',
           panNumber: '',
           profileImage: '',
@@ -66,7 +66,7 @@ const Profile = () => {
           name: user.name || '',
           email: user.email || '',
           mobile: user.mobile || '',
-          address: user.address || '',
+          address: '',
         });
       }
       setIsLoading(false);

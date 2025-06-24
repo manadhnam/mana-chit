@@ -73,11 +73,10 @@ const Register = () => {
     if (!isValid) return;
     
     try {
+      const { idProof, idType, ...userFields } = formData;
       await register({
-        ...formData,
-        idProof: formData.idProof
-          ? { type: formData.idType, verified: false, file: formData.idProof.name }
-          : undefined
+        ...userFields
+        // idProof is not part of the canonical User type, so do not include it
       });
       
       if (!error) {

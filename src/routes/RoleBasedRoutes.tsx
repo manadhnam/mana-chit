@@ -58,6 +58,7 @@ import SACollectionList from '@/pages/super-admin/collections/CollectionList';
 import SACollectionDetail from '@/pages/super-admin/collections/CollectionDetail';
 import SANewCollection from '@/pages/super-admin/collections/NewCollection';
 import UPIQRGeneration from '@/pages/super-admin/UPIQRGeneration';
+import FileManagement from '@/pages/super-admin/FileManagement';
 
 // Department Head Pages
 import DepartmentDashboard from '@/pages/department-head/Dashboard';
@@ -120,6 +121,7 @@ import StaffDirectory from '@/pages/branch-manager/staff/StaffDirectory';
 import StaffDetail from '@/pages/branch-manager/staff/StaffDetail';
 import CollectionList from '@/pages/branch-manager/collections/CollectionList';
 import CollectionDetail from '@/pages/branch-manager/collections/CollectionDetail';
+import AgentPerformanceOverview from '@/pages/branch-manager/AgentPerformanceOverview';
 
 // Branch Manager New Features
 import NewLoan from '@/pages/branch-manager/loans/NewLoan';
@@ -162,7 +164,10 @@ import CustomerAuditLog from '@/pages/customer/AuditLog';
 // Common Pages
 import NotFound from '@/pages/NotFound';
 import Unauthorized from '@/pages/Unauthorized';
-import Home from '@/pages/Home';
+import { LandingPage } from '@/pages/LandingPage';
+import Eligibility from '@/pages/public/Eligibility';
+import BlogPage from '@/pages/public/blog/BlogPage';
+import BlogPostPage from '@/pages/public/blog/BlogPostPage';
 
 const DebugRoute = () => {
   const location = useLocation();
@@ -206,11 +211,22 @@ const RoleBasedRoutes = () => {
     }
   };
 
+  // Redirect to role dashboard after login
+  if (isAuthenticated && user && (window.location.pathname === '/' || window.location.pathname === '/auth/login')) {
+    window.location.replace(getDefaultRoute(user.role));
+    return null;
+  }
+
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<Home />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
+
+      {/* Publicly accessible routes */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/eligibility" element={<Eligibility />} />
+      <Route path="/blog" element={<BlogPage />} />
+      <Route path="/blog/:slug" element={<BlogPostPage />} />
       
       {/* Auth routes */}
       {!isAuthenticated ? (
@@ -255,7 +271,7 @@ const RoleBasedRoutes = () => {
                   <Route path="user-analytics" element={<UserAnalytics />} />
                   <Route path="locations" element={<SuperAdminLocations />} />
                   <Route path="branches" element={<BranchManagement />} />
-                  <Route path="enhanced-branches" element={<EnhancedBranchManagement />} />
+                  <Route path="enhanced-branch-management" element={<EnhancedBranchManagement />} />
                   <Route path="funds-management" element={<FundsManagement />} />
                   <Route path="financial-oversight" element={<FinancialOversight />} />
                   <Route path="branches/:branchId/staff" element={<SuperAdminBranchStaffManagement />} />
@@ -282,6 +298,7 @@ const RoleBasedRoutes = () => {
                   <Route path="collections/:id" element={<SACollectionDetail />} />
                   <Route path="qr-management" element={<QRManagement />} />
                   <Route path="upi-qr-generation" element={<UPIQRGeneration />} />
+                  <Route path="file-management" element={<FileManagement />} />
                   <Route path="logout" element={<Navigate to="/auth/login" replace />} />
                   <Route path="*" element={<Navigate to="/super-admin/dashboard" replace />} />
                 </Routes>
@@ -366,6 +383,7 @@ const RoleBasedRoutes = () => {
                   <Route path="staff/attendance" element={<StaffAttendance />} />
                   <Route path="referral-management" element={<ReferralManagement />} />
                   <Route path="customers" element={<BranchManagerCustomerList />} />
+                  <Route path="agent-performance" element={<AgentPerformanceOverview />} />
                   <Route path="groups" element={<GroupList />} />
                   <Route path="groups/:groupId" element={<GroupDetail />} />
                   <Route path="groups/:groupId/members" element={<GroupMembers />} />

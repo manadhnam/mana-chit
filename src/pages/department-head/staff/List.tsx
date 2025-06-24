@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   UserGroupIcon, 
@@ -11,6 +11,8 @@ import {
 } from '@heroicons/react/24/solid';
 import { toast } from 'react-hot-toast';
 import { Dialog } from '@headlessui/react';
+import { useAuthStore } from '@/store/authStore';
+import { supabase } from '@/lib/supabaseClient';
 
 interface StaffMember {
   id: string;
@@ -21,9 +23,11 @@ interface StaffMember {
   status: 'active' | 'inactive' | 'on_leave';
   joinDate: string;
   performance: number;
+  department: string;
 }
 
 const StaffList = () => {
+  const { user } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [loading, setLoading] = useState(false);
@@ -37,7 +41,8 @@ const StaffList = () => {
       phone: '+91 9876543210',
       status: 'active',
       joinDate: '2023-01-15',
-      performance: 92
+      performance: 92,
+      department: 'Sales'
     },
     {
       id: '2',
@@ -47,7 +52,8 @@ const StaffList = () => {
       phone: '+91 9876543211',
       status: 'active',
       joinDate: '2023-03-20',
-      performance: 88
+      performance: 88,
+      department: 'Sales'
     },
     {
       id: '3',
@@ -57,7 +63,8 @@ const StaffList = () => {
       phone: '+91 9876543212',
       status: 'on_leave',
       joinDate: '2023-06-10',
-      performance: 85
+      performance: 85,
+      department: 'Sales'
     }
   ]);
   const [newStaff, setNewStaff] = useState<Partial<StaffMember>>({
@@ -68,7 +75,21 @@ const StaffList = () => {
     status: 'active',
     joinDate: '',
     performance: 80,
+    department: user?.department_id || ''
   });
+  const [department, setDepartment] = useState('');
+
+  useEffect(() => {
+    // Fetch department from Department Head's profile
+    const fetchDepartment = async () => {
+      if (user?.department_id) {
+        const { data } = await supabase.from('departments').select('name').eq('id', user.department_id).single();
+        if (data) setDepartment(data.name);
+        setNewStaff(s => ({ ...s, department: user.department_id || '' }));
+      }
+    };
+    fetchDepartment();
+  }, [user]);
 
   const filteredStaff = staffList.filter(member => {
     const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -109,27 +130,26 @@ const StaffList = () => {
     }
   };
 
-  const handleAddStaff = (e: React.FormEvent) => {
+  const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStaff.name || !newStaff.role || !newStaff.email || !newStaff.phone || !newStaff.joinDate) {
       toast.error('Please fill all required fields');
       return;
     }
-    setStaffList(prev => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        name: newStaff.name!,
-        role: newStaff.role!,
-        email: newStaff.email!,
-        phone: newStaff.phone!,
-        status: newStaff.status as StaffMember['status'],
-        joinDate: newStaff.joinDate!,
-        performance: newStaff.performance || 80,
-      },
-    ]);
+    setLoading(true);
+    // Save staff with department assignment
+    await supabase.from('users').insert({
+      name: newStaff.name,
+      email: newStaff.email,
+      mobile: newStaff.phone,
+      role: newStaff.role,
+      department_id: user?.department_id,
+      status: newStaff.status,
+      join_date: newStaff.joinDate,
+    });
+    setLoading(false);
     setIsAddModalOpen(false);
-    setNewStaff({ name: '', role: '', email: '', phone: '', status: 'active', joinDate: '', performance: 80 });
+    setNewStaff({ name: '', role: '', email: '', phone: '', status: 'active', joinDate: '', performance: 80, department: user?.department_id || '' });
     toast.success('Staff member added successfully');
   };
 
@@ -176,7 +196,11 @@ const StaffList = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role *</label>
-                <input type="text" value={newStaff.role} onChange={e => setNewStaff(s => ({ ...s, role: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md" required />
+                <select value={newStaff.role} onChange={e => setNewStaff(s => ({ ...s, role: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md" required>
+                  <option value="">Select Role</option>
+                  <option value="agent">Agent</option>
+                  <option value="staff">Staff</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email *</label>
@@ -201,6 +225,10 @@ const StaffList = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Performance (%)</label>
                 <input type="number" min={0} max={100} value={newStaff.performance} onChange={e => setNewStaff(s => ({ ...s, performance: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+                <input type="text" value={department} disabled className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-700 cursor-not-allowed" required />
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md">Cancel</button>

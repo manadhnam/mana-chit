@@ -1,16 +1,14 @@
 // User Types
 export type UserRole = 'superAdmin' | 'departmentHead' | 'mandalHead' | 'branchManager' | 'agent' | 'user';
 
-export interface User {
+// Freeze Log Types
+export interface FreezeLog {
   id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  avatar?: string;
-  walletBalance?: number;
-  idProof?: string;
+  userId: string;
+  action: 'freeze' | 'unfreeze';
+  frozenBy: string;
+  reason?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
 // Chit Group Types

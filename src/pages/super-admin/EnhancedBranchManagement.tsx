@@ -36,6 +36,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'react-hot-toast';
+import { supabase } from '@/lib/supabase';
+import { getDistricts } from '@/lib/telanganaData';
 
 // Register ChartJS components
 ChartJS.register(
@@ -54,9 +56,9 @@ interface Branch {
   name: string;
   code: string;
   address: string;
-  phone: string;
-  email: string;
-  manager: {
+  phone?: string;
+  email?: string;
+  manager?: {
     id: string;
     name: string;
     email: string;
@@ -94,148 +96,162 @@ interface BranchAlert {
   createdAt: string;
 }
 
+interface Mandal {
+  id: string;
+  name: string;
+}
+
+// Add static mandals mapping
+const staticMandals: Record<string, string[]> = {
+  Hyderabad: ['Ameerpet', 'Secunderabad', 'Charminar'],
+  Rangareddy: ['Ibrahimpatnam', 'Chevella', 'Shamshabad'],
+  Medchal: ['Medchal', 'Ghatkesar', 'Kompally'],
+  Nalgonda: ['Nalgonda', 'Miryalaguda', 'Devarakonda'],
+  Karimnagar: ['Karimnagar', 'Jammikunta', 'Huzurabad'],
+  Warangal: ['Warangal', 'Hanamkonda', 'Kazipet'],
+  Nizamabad: ['Nizamabad', 'Bodhan', 'Armoor'],
+  Adilabad: ['Adilabad', 'Utnoor', 'Boath'],
+  Mahbubnagar: ['Mahbubnagar', 'Gadwal', 'Narayanpet'],
+  Khammam: ['Khammam', 'Kothagudem', 'Sathupalli'],
+  Sangareddy: ['Sangareddy', 'Zaheerabad', 'Patancheru'],
+  Siddipet: ['Siddipet', 'Gajwel', 'Dubbak'],
+  Jagtial: ['Jagtial', 'Korutla', 'Metpally'],
+  Kamareddy: ['Kamareddy', 'Banswada', 'Yellareddy'],
+  Mancherial: ['Mancherial', 'Bellampalli', 'Luxettipet'],
+  Peddapalli: ['Peddapalli', 'Ramagundam', 'Manthani'],
+  'Rajanna Sircilla': ['Sircilla', 'Vemulawada', 'Gambhiraopet'],
+  Vikarabad: ['Vikarabad', 'Tandur', 'Parigi'],
+  Wanaparthy: ['Wanaparthy', 'Pebbair', 'Amarchinta'],
+  'Yadadri Bhuvanagiri': ['Bhongir', 'Alair', 'Motakondur'],
+};
+
 const EnhancedBranchManagement: React.FC = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [alerts, setAlerts] = useState<BranchAlert[]>([]);
+  const [mandals, setMandals] = useState<Mandal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [showAddBranch, setShowAddBranch] = useState(false);
+  const [formData, setFormData] = useState({
+    branchName: '',
+    district: '',
+    block: '',
+    address: '',
+    managerName: '',
+    contactNumber: '',
+    email: '',
+  });
+  const [availableMandals, setAvailableMandals] = useState<string[]>([]);
   const [showFinancialModal, setShowFinancialModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterRisk, setFilterRisk] = useState('all');
 
-  // Mock data
-  useEffect(() => {
-    const mockBranches: Branch[] = [
-      {
-        id: '1',
-        name: 'Mumbai Central',
-        code: 'MC001',
-        address: '123 Main Street, Mumbai Central, Mumbai',
-        phone: '+91-22-12345678',
-        email: 'mumbai.central@manachit.com',
-        manager: {
-          id: '1',
-          name: 'Rajesh Kumar',
-          email: 'rajesh.kumar@manachit.com'
-        },
-        status: 'active',
-        financialMetrics: {
-          totalRevenue: 25000000,
-          totalExpenses: 18000000,
-          netProfit: 7000000,
-          budgetUtilization: 85,
-          collectionsThisMonth: 3500000,
-          pendingCollections: 500000
-        },
-        performanceMetrics: {
-          customerCount: 1250,
-          staffCount: 25,
-          chitGroups: 45,
-          activeLoans: 180,
-          onTimePayments: 1150,
-          defaulters: 15
-        },
-        riskLevel: 'low',
-        createdAt: '2023-01-15',
-        lastUpdated: '2024-03-15'
-      },
-      {
-        id: '2',
-        name: 'Andheri West',
-        code: 'AW002',
-        address: '456 Andheri Road, Andheri West, Mumbai',
-        phone: '+91-22-87654321',
-        email: 'andheri.west@manachit.com',
-        manager: {
-          id: '2',
-          name: 'Priya Sharma',
-          email: 'priya.sharma@manachit.com'
-        },
-        status: 'active',
-        financialMetrics: {
-          totalRevenue: 18000000,
-          totalExpenses: 14000000,
-          netProfit: 4000000,
-          budgetUtilization: 92,
-          collectionsThisMonth: 2800000,
-          pendingCollections: 750000
-        },
-        performanceMetrics: {
-          customerCount: 980,
-          staffCount: 18,
-          chitGroups: 32,
-          activeLoans: 145,
-          onTimePayments: 920,
-          defaulters: 25
-        },
-        riskLevel: 'medium',
-        createdAt: '2023-03-20',
-        lastUpdated: '2024-03-14'
-      },
-      {
-        id: '3',
-        name: 'Bandra East',
-        code: 'BE003',
-        address: '789 Bandra Road, Bandra East, Mumbai',
-        phone: '+91-22-11223344',
-        email: 'bandra.east@manachit.com',
-        manager: {
-          id: '3',
-          name: 'Amit Patel',
-          email: 'amit.patel@manachit.com'
-        },
-        status: 'active',
-        financialMetrics: {
-          totalRevenue: 12000000,
-          totalExpenses: 11000000,
-          netProfit: 1000000,
-          budgetUtilization: 78,
-          collectionsThisMonth: 1800000,
-          pendingCollections: 1200000
-        },
-        performanceMetrics: {
-          customerCount: 650,
-          staffCount: 12,
-          chitGroups: 20,
-          activeLoans: 95,
-          onTimePayments: 580,
-          defaulters: 45
-        },
-        riskLevel: 'high',
-        createdAt: '2023-06-10',
-        lastUpdated: '2024-03-13'
-      }
-    ];
+  const [districts, setDistricts] = useState(getDistricts());
 
-    const mockAlerts: BranchAlert[] = [
-      {
-        id: '1',
-        branchId: '3',
-        type: 'financial',
-        severity: 'high',
-        title: 'High Pending Collections',
-        description: 'Bandra East branch has ₹12L pending collections exceeding threshold',
-        status: 'open',
-        createdAt: '2024-03-15T10:00:00Z'
-      },
-      {
-        id: '2',
-        branchId: '2',
-        type: 'operational',
-        severity: 'medium',
-        title: 'Staff Shortage',
-        description: 'Andheri West branch needs additional staff for peak hours',
-        status: 'in_progress',
-        createdAt: '2024-03-14T14:30:00Z'
-      }
-    ];
+  const handleDistrictChange = (district: string) => {
+    setFormData(prev => ({ ...prev, district, block: '' }));
+    const mandals = staticMandals[district] || [];
+    if (mandals.length === 0) {
+      toast.error(`No mandals found for district ${district}`);
+    }
+    setAvailableMandals(mandals);
+  };
 
-    setTimeout(() => {
-      setBranches(mockBranches);
-      setAlerts(mockAlerts);
+  const handleMandalChange = (mandal: string) => {
+    setFormData(prev => ({ ...prev, block: mandal }));
+  };
+
+  const fetchBranches = async () => {
+    setIsLoading(true);
+    try {
+      // Direct table access to avoid issues with RPC function
+      const { data: branchData, error: branchError } = await supabase
+        .from('branches')
+        .select('*, mandals(name)');
+      
+      if (branchError) {
+        toast.error(`Error fetching branches: ${branchError.message}`);
+        throw branchError;
+      }
+
+      const managerIds = branchData
+        .map(b => b.manager_id)
+        .filter(id => id !== null);
+      
+      let managers: any[] = [];
+      if (managerIds.length > 0) {
+        const { data: managerData, error: managerError } = await supabase
+          .from('users')
+          .select('id, name, email')
+          .in('id', managerIds);
+
+        if (managerError) {
+          toast.error(`Error fetching managers: ${managerError.message}`);
+          throw managerError;
+        }
+        managers = managerData;
+      }
+      
+      const combinedData = branchData.map(branch => ({
+        ...branch,
+        id: branch.id,
+        name: branch.name,
+        code: `BRN-${branch.id.substring(0,4)}`,
+        address: branch.address,
+        manager: managers.find(m => m.id === branch.manager_id) || undefined,
+        status: 'active', // Mock data, replace with actual status if available
+        financialMetrics: { // Mock data
+          totalRevenue: Math.random() * 5000000,
+          netProfit: Math.random() * 1000000,
+          budgetUtilization: Math.random() * 100,
+          collectionsThisMonth: Math.random() * 500000,
+          pendingCollections: Math.floor(Math.random() * 50),
+          totalExpenses: 0,
+        },
+        performanceMetrics: { // Mock data
+          customerCount: Math.floor(Math.random() * 500),
+          staffCount: Math.floor(Math.random() * 20),
+          chitGroups: Math.floor(Math.random() * 10),
+          activeLoans: 0,
+          onTimePayments: 0,
+          defaulters: 0,
+        },
+        riskLevel: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as 'low' | 'medium' | 'high', // Mock
+        createdAt: branch.created_at,
+        lastUpdated: branch.updated_at,
+      }));
+
+      setBranches(combinedData as unknown as Branch[]);
+      
+      // Mock alerts for now as the table doesn't exist yet
+      setAlerts([
+        { id: '1', branchId: 'some-uuid-1', type: 'financial', severity: 'high', title: 'Unusual Loan Activity', description: 'High number of loan defaults this month.', status: 'open', createdAt: '2024-03-15' },
+        { id: '2', branchId: 'some-uuid-2', type: 'compliance', severity: 'medium', title: 'KYC Documents Pending', description: 'Over 20 new customers have pending KYC verification.', status: 'in_progress', createdAt: '2024-03-14' },
+      ]);
+
+    } catch (err: any) {
+      // Error is already toasted
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
+  };
+
+  const fetchMandals = async () => {
+    try {
+      const { data, error } = await supabase.from('mandals').select('id, name');
+      if (error) {
+        toast.error(`Error fetching mandals: ${error.message}`);
+        throw error;
+      }
+      setMandals(data || []);
+    } catch (err: any) {
+      // Error is already toasted
+    }
+  };
+
+  useEffect(() => {
+    fetchBranches();
+    fetchMandals();
   }, []);
 
   const totalRevenue = branches.reduce((sum, branch) => sum + branch.financialMetrics.totalRevenue, 0);
@@ -265,9 +281,52 @@ const EnhancedBranchManagement: React.FC = () => {
     }]
   };
 
-  const handleAddBranch = () => {
-    toast.success('Branch added successfully');
-    setShowAddBranch(false);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // Add your API call here
+      const { error } = await supabase
+        .from('branches')
+        .insert([
+          {
+            name: formData.branchName,
+            address: formData.address,
+            district: formData.district,
+            mandal: formData.block,
+            manager_name: formData.managerName,
+            contact_number: formData.contactNumber,
+            email: formData.email,
+          },
+        ]);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Branch created successfully');
+      setShowAddBranch(false);
+      
+      // Reset form
+      setFormData({
+        branchName: '',
+        district: '',
+        block: '',
+        address: '',
+        managerName: '',
+        contactNumber: '',
+        email: '',
+      });
+
+      // Refresh branches list
+      fetchBranches();
+    } catch (error) {
+      console.error('Error creating branch:', error);
+      toast.error('Failed to create branch');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleFinancialReview = () => {
@@ -317,6 +376,14 @@ const EnhancedBranchManagement: React.FC = () => {
         <p className="text-gray-600 dark:text-gray-400 mt-1">
           Comprehensive oversight of all branches with financial controls
         </p>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => setShowAddBranch(true)}>
+          <PlusIcon className="h-5 w-5 mr-2" />
+          Add Branch
+        </Button>
       </div>
 
       {/* Quick Stats */}
@@ -563,8 +630,14 @@ const EnhancedBranchManagement: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{branch.manager.name}</p>
-                      <p className="text-sm text-gray-500">{branch.manager.email}</p>
+                      {branch.manager ? (
+                        <>
+                          <p className="font-medium">{branch.manager.name}</p>
+                          <p className="text-sm text-gray-500">{branch.manager.email}</p>
+                        </>
+                      ) : (
+                        <p className="font-medium">N/A</p>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -610,36 +683,128 @@ const EnhancedBranchManagement: React.FC = () => {
 
       {/* Add Branch Dialog */}
       <Dialog open={showAddBranch} onOpenChange={setShowAddBranch}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add New Branch</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="branchName">Branch Name</Label>
-              <Input id="branchName" placeholder="Enter branch name" />
-            </div>
-            <div>
-              <Label htmlFor="branchCode">Branch Code</Label>
-              <Input id="branchCode" placeholder="Enter branch code" />
-            </div>
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" placeholder="Enter address" />
-            </div>
-            <div>
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" placeholder="Enter phone number" />
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="Enter email" />
+          <div className="py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="branch-name">Branch Name</Label>
+                <Input
+                  id="branch-name"
+                  value={formData.branchName}
+                  onChange={(e) => setFormData({ ...formData, branchName: e.target.value })}
+                  placeholder="e.g. Hyderabad Main"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="branch-address">Address</Label>
+                <Input
+                  id="branch-address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="e.g. 123 Main St, Hyderabad"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="branch-state">State</Label>
+                <Input 
+                  id="branch-state" 
+                  value={formData.district} 
+                  disabled 
+                  className="mt-1 bg-gray-50"
+                />
+              </div>
+              <div>
+                <Label htmlFor="branch-district">District</Label>
+                <Select
+                  value={formData.district}
+                  onValueChange={handleDistrictChange}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select a district" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {districts.map((d) => (
+                      <SelectItem key={d.name} value={d.name}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="branch-block">Block/Mandal</Label>
+                <Select
+                  value={formData.block}
+                  onValueChange={handleMandalChange}
+                  disabled={!formData.district || availableMandals.length === 0}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder={
+                      !formData.district 
+                        ? "Select a district first" 
+                        : availableMandals.length === 0 
+                          ? "No mandals available" 
+                          : "Select a block/mandal"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMandals.map((mandal) => (
+                      <SelectItem key={mandal} value={mandal}>
+                        {mandal}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="branch-managerName">Manager Name</Label>
+                <Input
+                  id="branch-managerName"
+                  value={formData.managerName}
+                  onChange={(e) => setFormData({ ...formData, managerName: e.target.value })}
+                  placeholder="e.g. John Doe"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="branch-contactNumber">Contact Number</Label>
+                <Input
+                  id="branch-contactNumber"
+                  type="tel"
+                  pattern="[0-9]{10}"
+                  value={formData.contactNumber}
+                  onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                  placeholder="e.g. 9876543210"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="branch-email">Email</Label>
+                <Input
+                  id="branch-email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="e.g. john@example.com"
+                  className="mt-1"
+                />
+              </div>
             </div>
           </div>
-          <DialogFooter>
+          <div className="flex justify-end gap-4 mt-6">
             <Button variant="outline" onClick={() => setShowAddBranch(false)}>Cancel</Button>
-            <Button onClick={handleAddBranch}>Add Branch</Button>
-          </DialogFooter>
+            <Button 
+              type="submit"
+              disabled={!formData.branchName || !formData.district || !formData.block || isLoading}
+            >
+              {isLoading ? 'Creating...' : 'Create Branch'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -669,6 +834,13 @@ const EnhancedBranchManagement: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Branch Detail Modal - Mockup */}
+      {selectedBranch && (
+        <Dialog open={!!selectedBranch} onOpenChange={() => setSelectedBranch(null)}>
+          {/* Add your branch detail content here */}
+        </Dialog>
+      )}
     </div>
   );
 };

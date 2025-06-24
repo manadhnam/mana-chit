@@ -43,32 +43,22 @@ const CustomerList = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<CustomerStatus | 'all'>('all');
+  const [activeTab, setActiveTab] = useState<CustomerStatus | 'all'>('pending');
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchCustomers = async () => {
-    if (!user?.branchId) return;
+    if (!user?.branch_id) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('customers')
         .select('*')
-        .eq('branch_id', user.branchId);
+        .eq('branch_id', user.branch_id);
 
       if (error) {
         throw error;
       }
-      // Mock data for now to ensure we have pending users to test
-      const mockCustomers: Customer[] = [
-        { id: '1', name: 'Srinivas', email: 'srinivas@example.com', mobile: '1234567890', code: 'CUST001', status: 'active', created_at: '2024-01-01', updated_at: '2024-01-01', branch_id: user.branchId },
-        { id: '2', name: 'Lakshmi', email: 'lakshmi@example.com', mobile: '1234567890', code: 'CUST002', status: 'pending', created_at: '2024-01-01', updated_at: '2024-01-01', branch_id: user.branchId },
-        { id: '3', name: 'Venkatesh', email: 'venkatesh@example.com', mobile: '1234567890', code: 'CUST003', status: 'inactive', created_at: '2024-01-01', updated_at: '2024-01-01', branch_id: user.branchId },
-        { id: '4', name: 'Padma', email: 'padma@example.com', mobile: '1234567890', code: 'CUST004', status: 'rejected', created_at: '2024-01-01', updated_at: '2024-01-01', branch_id: user.branchId },
-      ];
-      // In a real scenario, you'd use the data from the API. We mix for demonstration.
-      const fetchedCustomers = data || [];
-      const combinedCustomers = [...fetchedCustomers, ...mockCustomers.filter(mc => !fetchedCustomers.some(fc => fc.id === mc.id))];
-      setCustomers(combinedCustomers as Customer[]);
+      setCustomers(data as Customer[]);
 
     } catch (error) {
       toast.error('Failed to load customers');
@@ -123,7 +113,7 @@ const CustomerList = () => {
       toast.success(`Customer ${name} has been ${status === 'active' ? 'approved' : 'rejected'}.`);
       await log_audit(
         `customer_${status === 'active' ? 'approve' : 'reject'}`,
-        { customerId: id, customerName: name, branchId: user.branchId },
+        { customerId: id, customerName: name, branchId: user.branch_id },
         user.id
       );
       fetchCustomers(); // Re-fetch to get the latest state
@@ -138,6 +128,8 @@ const CustomerList = () => {
       (customer.code && customer.code.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesTab && matchesSearch;
   });
+
+  const pendingCount = customers.filter(c => c.status === 'pending').length;
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-7xl mx-auto">
@@ -191,16 +183,23 @@ const CustomerList = () => {
           </div>
         </motion.div>
         {/* Pending Customers */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg ring-2 ring-yellow-500">
            <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0"><ClockIcon className="h-6 w-6 text-yellow-500" /></div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Pending</dt>
-                  <dd><div className="text-2xl font-semibold text-gray-900 dark:text-white">{customers.filter(c => c.status === 'pending').length}</div></dd>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Pending Approval</dt>
+                  <dd><div className="text-2xl font-semibold text-gray-900 dark:text-white">{pendingCount}</div></dd>
                 </dl>
               </div>
+            </div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-700 px-5 py-3">
+            <div className="text-sm">
+              <button onClick={() => setActiveTab('pending')} className="font-medium text-yellow-700 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300">
+                View all
+              </button>
             </div>
           </div>
         </motion.div>
@@ -262,32 +261,46 @@ const CustomerList = () => {
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Code
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th scope="col" className="relative px-6 py-3">
+                    <span className="sr-only">View Details</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredCustomers.map((customer) => (
-                  <tr key={customer.id}>
+                  <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{customer.name}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{customer.email}</div>
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <UserGroupIcon className="h-10 w-10 text-gray-400" />
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">{customer.name}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{customer.code}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{customer.code}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{customer.mobile}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={customer.status as CustomerStatus} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      {customer.status === 'pending' ? (
-                        <>
-                          <button onClick={() => updateCustomerStatus(customer.id, customer.name, 'active')} className="text-green-600 hover:text-green-900">Approve</button>
-                          <button onClick={() => updateCustomerStatus(customer.id, customer.name, 'rejected')} className="text-red-600 hover:text-red-900">Reject</button>
-                        </>
-                      ) : (
-                        <Link to={`/branch-manager/customers/${customer.id}`} className="text-primary-600 hover:text-primary-900">View</Link>
-                      )}
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <Link
+                        to={`/branch-manager/customers/${customer.id}`}
+                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                      >
+                        View
+                        <EyeIcon className="h-4 w-4 ml-1.5" />
+                      </Link>
                     </td>
                   </tr>
                 ))}

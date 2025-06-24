@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
@@ -16,12 +16,44 @@ const NewChitGroup = () => {
     chit_value: '',
     max_members: '',
     duration: '',
-    commission_percentage: '',
+    commission_percentage: '5', // Default commission
     start_date: '',
     description: ''
   });
 
-  const branchId = user?.branchId;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const newFormData = { ...prev, [name]: value };
+      // Automatically set duration to match number of members
+      if (name === 'max_members') {
+        newFormData.duration = value;
+      }
+      return newFormData;
+    });
+  };
+
+  const calculatedValues = useMemo(() => {
+    const chitValue = parseFloat(formData.chit_value) || 0;
+    const maxMembers = parseInt(formData.max_members, 10) || 0;
+    const commissionPercentage = parseFloat(formData.commission_percentage) || 0;
+
+    if (chitValue <= 0 || maxMembers <= 0) {
+      return { installment: 0, totalCommission: 0, monthlyCollection: 0 };
+    }
+
+    const installment = chitValue / maxMembers;
+    const totalCommission = (chitValue * commissionPercentage) / 100;
+    const monthlyCollection = installment * maxMembers;
+
+    return {
+      installment,
+      totalCommission,
+      monthlyCollection,
+    };
+  }, [formData.chit_value, formData.max_members, formData.commission_percentage]);
+
+  const branchId = user?.branch_id;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,106 +117,62 @@ const NewChitGroup = () => {
 
       <div className="bg-white rounded-lg shadow p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Group Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.group_name}
-                onChange={(e) => setFormData({...formData, group_name: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
-                placeholder="Enter group name"
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
+            <div className="md:col-span-2">
+              <label htmlFor="group_name" className="block text-sm font-medium text-gray-700">Group Name *</label>
+              <input type="text" name="group_name" id="group_name" required value={formData.group_name} onChange={handleInputChange} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" placeholder="e.g., Summer Savings Group"/>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Chit Value (₹) *
-              </label>
-              <input
-                type="number"
-                required
-                value={formData.chit_value}
-                onChange={(e) => setFormData({...formData, chit_value: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
-                placeholder="Enter chit value"
-              />
+              <label htmlFor="chit_value" className="block text-sm font-medium text-gray-700">Chit Value (₹) *</label>
+              <input type="number" name="chit_value" id="chit_value" required value={formData.chit_value} onChange={handleInputChange} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" placeholder="e.g., 50000"/>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Number of Members *
-              </label>
-              <input
-                type="number"
-                required
-                value={formData.max_members}
-                onChange={(e) => setFormData({...formData, max_members: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
-                placeholder="Enter member count"
-              />
+              <label htmlFor="max_members" className="block text-sm font-medium text-gray-700">Number of Members *</label>
+              <input type="number" name="max_members" id="max_members" required value={formData.max_members} onChange={handleInputChange} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" placeholder="e.g., 10"/>
+            </div>
+            
+            <div>
+              <label htmlFor="duration" className="block text-sm font-medium text-gray-700">Duration (Months)</label>
+              <input type="number" name="duration" id="duration" readOnly value={formData.duration} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100" placeholder="Same as member count"/>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Duration (Months) *
-              </label>
-              <input
-                type="number"
-                required
-                value={formData.duration}
-                onChange={(e) => setFormData({...formData, duration: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
-                placeholder="Enter duration"
-              />
+              <label htmlFor="commission_percentage" className="block text-sm font-medium text-gray-700">Commission (%) *</label>
+              <input type="number" name="commission_percentage" id="commission_percentage" required value={formData.commission_percentage} onChange={handleInputChange} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" placeholder="e.g., 5" step="0.1"/>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Commission (%) *
-              </label>
-              <input
-                type="number"
-                required
-                value={formData.commission_percentage}
-                onChange={(e) => setFormData({...formData, commission_percentage: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
-                placeholder="Enter commission rate"
-                step="0.1"
-              />
+            <div className="md:col-span-2">
+              <label htmlFor="start_date" className="block text-sm font-medium text-gray-700">Start Date *</label>
+              <input type="date" name="start_date" id="start_date" required value={formData.start_date} onChange={handleInputChange} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"/>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Start Date *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.start_date}
-                onChange={(e) => setFormData({...formData, start_date: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
+          <div className="mt-6 border-t border-gray-200 pt-6">
+            <h3 className="text-lg font-medium text-gray-900">Calculated Details</h3>
+            <dl className="mt-4 grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+              <div className="sm:col-span-1 bg-gray-50 p-4 rounded-lg">
+                <dt className="text-sm font-medium text-gray-500">Monthly Installment</dt>
+                <dd className="mt-1 text-xl font-semibold text-gray-900">₹{calculatedValues.installment.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</dd>
+              </div>
+              <div className="sm:col-span-1 bg-gray-50 p-4 rounded-lg">
+                <dt className="text-sm font-medium text-gray-500">Total Commission</dt>
+                <dd className="mt-1 text-xl font-semibold text-gray-900">₹{calculatedValues.totalCommission.toLocaleString('en-IN')}</dd>
+              </div>
+              <div className="sm:col-span-2 bg-blue-50 p-4 rounded-lg">
+                <dt className="text-sm font-medium text-blue-600">Total Collection per Month</dt>
+                <dd className="mt-1 text-2xl font-bold text-blue-800">₹{calculatedValues.monthlyCollection.toLocaleString('en-IN')}</dd>
+              </div>
+            </dl>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
-              placeholder="Enter group description"
-            />
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+            <textarea name="description" id="description" value={formData.description} onChange={handleInputChange} rows={3} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500" placeholder="Optional notes about the group"/>
           </div>
 
-          <div className="flex justify-end space-x-4">
+          <div className="flex justify-end space-x-4 pt-4">
             <button
               type="button"
               onClick={() => navigate('/branch-manager/groups')}

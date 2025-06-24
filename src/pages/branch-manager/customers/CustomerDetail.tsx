@@ -3,15 +3,22 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { log_audit } from '@/lib/audit';
 import toast from 'react-hot-toast';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 interface Customer {
   id: string;
+  user_id: string;
   name: string;
   email: string;
   phone: string;
   address: string;
-  status: 'active' | 'inactive' | 'pending';
+  status: 'active' | 'inactive' | 'pending' | 'rejected';
   created_at: string;
+  id_proof_url?: string;
+  photo_url?: string;
   groups: CustomerGroup[];
   payments: CustomerPayment[];
 }
@@ -38,18 +45,64 @@ const CustomerDetail = () => {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalAction, setModalAction] = useState<'approve' | 'reject' | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  const handleActionClick = (action: 'approve' | 'reject') => {
+    setModalAction(action);
+    setIsModalOpen(true);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!customer || !modalAction) return;
+
+    if (modalAction === 'reject' && !rejectionReason.trim()) {
+      toast.error('A reason for rejection is required.');
+      return;
+    }
+    
+    setLoading(true);
+    const newStatus = modalAction === 'approve' ? 'active' : 'rejected';
+
+    // Update customer status
+    const { error: customerUpdateError } = await supabase
+      .from('customers')
+      .update({ status: newStatus })
+      .eq('id', customer.id);
+      
+    // Also update the corresponding user's status
+    const { error: userUpdateError } = await supabase
+      .from('users')
+      .update({ status: newStatus })
+      .eq('id', customer.user_id);
+
+    setLoading(false);
+
+    if (customerUpdateError || userUpdateError) {
+      toast.error('Failed to update customer status.');
+    } else {
+      toast.success(`Customer has been ${newStatus}.`);
+      setCustomer({ ...customer, status: newStatus as any });
+      await log_audit(`branch_manager.customer.${modalAction}`, {
+        customerId: customer.id,
+        customerName: customer.name,
+        reason: modalAction === 'reject' ? rejectionReason : undefined,
+      });
+    }
+    
+    setIsModalOpen(false);
+    setRejectionReason('');
+  };
 
   const fetchCustomerDetails = async () => {
     if (!customerId) return;
-    
     setLoading(true);
     setError('');
-    
     try {
-      // Fetch customer details
       const { data: customerData, error: customerError } = await supabase
         .from('customers')
-        .select('*')
+        .select('*, user:users(id)')
         .eq('id', customerId)
         .single();
 
@@ -90,12 +143,15 @@ const CustomerDetail = () => {
       // Transform the data
       const transformedCustomer: Customer = {
         id: customerData.id,
+        user_id: customerData.user_id,
         name: customerData.name,
         email: customerData.email,
         phone: customerData.phone,
         address: customerData.address || '',
         status: customerData.status,
         created_at: customerData.created_at,
+        id_proof_url: customerData.id_proof_url,
+        photo_url: customerData.photo_url,
         groups: (groupMemberships || []).map(membership => ({
           id: membership.chit_group_id,
           name: chitGroupDetailsMap.get(membership.chit_group_id)?.name || 'Unknown Group',
@@ -179,6 +235,17 @@ const CustomerDetail = () => {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        {customer?.status === 'pending' && (
+          <div className="p-4 bg-yellow-100 dark:bg-yellow-900 border-b border-yellow-200 dark:border-yellow-800">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-yellow-800 dark:text-yellow-200">This customer is pending approval.</p>
+              <div className="space-x-2">
+                <Button onClick={() => handleActionClick('approve')} variant="default" size="sm" className="bg-green-600 hover:bg-green-700">Approve</Button>
+                <Button onClick={() => handleActionClick('reject')} variant="destructive" size="sm">Reject</Button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
@@ -199,67 +266,63 @@ const CustomerDetail = () => {
         </div>
 
         <div className="p-6">
-          {/* Customer Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Contact Information</h3>
-              <div className="space-y-2 text-sm">
-                <p><span className="font-medium">Phone:</span> {customer.phone}</p>
-                <p><span className="font-medium">Email:</span> {customer.email}</p>
-                <p><span className="font-medium">Address:</span> {customer.address || 'Not provided'}</p>
-                <p><span className="font-medium">Member Since:</span> {new Date(customer.created_at).toLocaleDateString()}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Left Column: Main Details */}
+            <div className="md:col-span-2 space-y-8">
+              {/* Contact Info */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Contact Information</h3>
+                <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                  <p><span className="font-medium text-gray-500">Phone:</span> {customer.phone}</p>
+                  <p><span className="font-medium text-gray-500">Address:</span> {customer.address}</p>
+                  <p><span className="font-medium text-gray-500">Member Since:</span> {new Date(customer.created_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              {/* Groups Joined */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Groups Joined</h3>
+                {customer.groups.length === 0 ? (
+                  <p className="text-sm text-gray-500">No groups joined yet.</p>
+                ) : (
+                  <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {customer.groups.map(group => (
+                      <li key={group.id} className="py-2 flex justify-between items-center">
+                        <span className="font-medium">{group.name}</span>
+                        <span className="text-sm text-gray-500">Joined: {new Date(group.joined_date).toLocaleDateString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Payment Summary</h3>
-              <div className="space-y-2 text-sm">
-                <p><span className="font-medium">Total Payments:</span> ₹{totalPayments.toLocaleString()}</p>
-                <p><span className="font-medium">Paid:</span> {paidPayments} payments</p>
-                <p><span className="font-medium">Pending:</span> {pendingPayments} payments</p>
-                <p><span className="font-medium">Active Groups:</span> {customer.groups.filter(g => g.status === 'active').length}</p>
+
+            {/* Right Column: Documents */}
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Customer Photo</h3>
+                {customer?.photo_url ? (
+                  <img src={customer.photo_url} alt="Customer" className="w-32 h-32 rounded-full object-cover shadow-lg" />
+                ) : (
+                  <p className="text-sm text-gray-500">No photo provided.</p>
+                )}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">ID Proof</h3>
+                {customer?.id_proof_url ? (
+                  <a href={customer.id_proof_url} target="_blank" rel="noopener noreferrer" className="block">
+                    <img src={customer.id_proof_url} alt="ID Proof" className="w-full rounded-lg object-contain border p-1 hover:border-primary-500 transition-all shadow" />
+                  </a>
+                ) : (
+                  <p className="text-sm text-gray-500">No ID proof provided.</p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Groups */}
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Groups Joined</h2>
-            {customer.groups.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400">No groups joined yet.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {customer.groups.map(group => (
-                  <div key={group.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Link 
-                          to={`/branch-manager/groups/${group.id}`} 
-                          className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
-                        >
-                          {group.name}
-                        </Link>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Joined: {new Date(group.joined_date).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        group.status === 'active' 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      }`}>
-                        {group.status.charAt(0).toUpperCase() + group.status.slice(1)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Payment History */}
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Payment History</h2>
+          {/* Payments Section (Full Width) */}
+          <div className="mt-10">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Payment History</h3>
             {customer.payments.length === 0 ? (
               <p className="text-gray-500 dark:text-gray-400">No payment history available.</p>
             ) : (
@@ -314,6 +377,38 @@ const CustomerDetail = () => {
           </div>
         </div>
       </div>
+      
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm {modalAction === 'approve' ? 'Approval' : 'Rejection'}</DialogTitle>
+            <DialogDescription>
+              {modalAction === 'approve' ?
+                `Are you sure you want to approve ${customer?.name}?` :
+                `Please provide a reason for rejecting ${customer?.name}.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          {modalAction === 'reject' && (
+            <div className="grid gap-4 py-4">
+              <Label htmlFor="rejection-reason" className="text-left">Reason</Label>
+              <Textarea
+                id="rejection-reason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="e.g., Incomplete documentation, failed verification..."
+                className="col-span-3"
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleConfirmAction} className={modalAction === 'reject' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}>
+              Confirm {modalAction === 'approve' ? 'Approval' : 'Rejection'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

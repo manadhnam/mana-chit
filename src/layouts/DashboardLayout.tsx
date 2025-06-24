@@ -151,9 +151,9 @@ const DashboardLayout = ({ isAdmin = false }: DashboardLayoutProps) => {
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center mb-4 p-2 rounded-md bg-gray-50 dark:bg-gray-700">
             <div className="flex-shrink-0">
-              {user?.profilePic ? (
+              {user?.photo_url ? (
                 <img 
-                  src={user.profilePic} 
+                  src={user.photo_url} 
                   alt={user.name}
                   className="h-10 w-10 rounded-full"
                 />
@@ -262,9 +262,9 @@ const DashboardLayout = ({ isAdmin = false }: DashboardLayoutProps) => {
               <div className="mt-auto px-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center mb-4 p-2 rounded-md bg-gray-50 dark:bg-gray-700">
                   <div className="flex-shrink-0">
-                    {user?.profilePic ? (
+                    {user?.photo_url ? (
                       <img 
-                        src={user.profilePic} 
+                        src={user.photo_url} 
                         alt={user.name}
                         className="h-10 w-10 rounded-full"
                       />

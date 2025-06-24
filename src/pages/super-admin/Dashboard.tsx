@@ -10,6 +10,9 @@ import {
   CurrencyRupeeIcon,
   UsersIcon,
   ClipboardDocumentListIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  ArrowRightIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -20,11 +23,24 @@ import ChitGroupConfig from '@/components/chit/ChitGroupConfig';
 import { BranchStats } from '@/components/chit/BranchStats';
 import { User, ChitGroup, Receipt } from '@/types/database';
 
+// A small component to show trend indicators
+const TrendIndicator = ({ value }: { value: number }) => {
+  const isPositive = value >= 0;
+  return (
+    <span className={`flex items-center text-sm font-medium ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+      {isPositive ? <ArrowUpIcon className="h-4 w-4 mr-1" /> : <ArrowDownIcon className="h-4 w-4 mr-1" />}
+      {value.toFixed(1)}%
+      <span className="text-gray-500 dark:text-gray-400 ml-1">vs last month</span>
+    </span>
+  );
+};
+
 interface DashboardStats {
   customerCount: number;
+  customerCountChange: number; // Percentage change from last month
   groupCount: number;
-  staffCount: number;
   totalCollections: number;
+  totalCollectionsChange: number; // Percentage change from last month
   branchCount: number;
 }
 
@@ -36,6 +52,57 @@ interface RecentReceipt extends Receipt {
     customer_name: string;
     branch_name: string;
 }
+
+interface RecentActivityTableProps {
+  title: string;
+  headers: string[];
+  items: any[];
+  renderRow: (item: any) => React.ReactNode;
+  viewAllLink?: string;
+}
+
+const RecentActivityTable: React.FC<RecentActivityTableProps> = ({ title, headers, items, renderRow, viewAllLink }) => {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+      <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>
+        {viewAllLink && (
+          <Link to={viewAllLink} className="text-sm font-medium text-primary-600 hover:underline flex items-center">
+            View All
+            <ArrowRightIcon className="h-4 w-4 ml-1" />
+          </Link>
+        )}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full">
+          <thead>
+            <tr>
+              {headers.map((header) => (
+                <th key={header} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  {header}
+                </th>
+              ))}
+              <th scope="col" className="relative px-6 py-3">
+                <span className="sr-only">View</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            {items && items.length > 0 ? (
+              items.map(renderRow)
+            ) : (
+              <tr>
+                <td colSpan={headers.length + 1} className="text-center py-10 text-sm text-gray-500">
+                  No recent activity.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
 const SuperAdminDashboard = () => {
   const { user } = useAuthStore();
@@ -52,36 +119,53 @@ const SuperAdminDashboard = () => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
       try {
+        const today = new Date();
+        const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+
         // Parallel fetching
         const [
-          { count: customerCount },
+          { count: customerCountCurrentMonth },
+          { count: customerCountLastMonth },
           { count: groupCount },
-          { count: staffCount },
-          { data: totalCollectionsData },
+          { data: collectionsCurrentMonth },
+          { data: collectionsLastMonth },
           { count: branchCount },
         ] = await Promise.all([
-          supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'customer'),
+          supabase.from('customers').select('*', { count: 'exact', head: true }).gte('created_at', currentMonthStart.toISOString()),
+          supabase.from('customers').select('*', { count: 'exact', head: true }).gte('created_at', lastMonthStart.toISOString()).lt('created_at', currentMonthStart.toISOString()),
           supabase.from('chit_groups').select('*', { count: 'exact', head: true }),
-          supabase.from('users').select('*', { count: 'exact', head: true }).in('role', ['agent', 'branchManager', 'mandalHead', 'departmentHead']),
-          supabase.from('receipts').select('amount'),
+          supabase.from('collections').select('amount').gte('created_at', currentMonthStart.toISOString()),
+          supabase.from('collections').select('amount').gte('created_at', lastMonthStart.toISOString()).lt('created_at', currentMonthStart.toISOString()),
           supabase.from('branches').select('*', { count: 'exact', head: true }),
         ]);
 
-        const totalCollections = totalCollectionsData?.reduce((sum, item) => sum + item.amount, 0) || 0;
+        const totalCollectionsCurrentMonth = collectionsCurrentMonth?.reduce((sum, item) => sum + item.amount, 0) || 0;
+        const totalCollectionsLastMonth = collectionsLastMonth?.reduce((sum, item) => sum + item.amount, 0) || 0;
+        
+        // Calculate percentage changes
+        const safeCustomerCountCurrent = customerCountCurrentMonth ?? 0;
+        const safeCustomerCountLast = customerCountLastMonth ?? 0;
+        const customerChange = safeCustomerCountLast ? ((safeCustomerCountCurrent - safeCustomerCountLast) / safeCustomerCountLast) * 100 : safeCustomerCountCurrent > 0 ? 100 : 0;
+        const collectionsChange = totalCollectionsLastMonth ? ((totalCollectionsCurrentMonth - totalCollectionsLastMonth) / totalCollectionsLastMonth) * 100 : totalCollectionsCurrentMonth > 0 ? 100 : 0;
+        
+        // Fetch total customer count for the main stat
+        const { count: totalCustomerCount } = await supabase.from('customers').select('*', { count: 'exact', head: true });
 
         setStats({
-          customerCount: customerCount ?? 0,
+          customerCount: totalCustomerCount ?? 0,
+          customerCountChange: customerChange,
           groupCount: groupCount ?? 0,
-          staffCount: staffCount ?? 0,
-          totalCollections,
+          totalCollections: totalCollectionsCurrentMonth,
+          totalCollectionsChange: collectionsChange,
           branchCount: branchCount ?? 0,
         });
         
         // Fetch recent activities
         const { data: customersData, error: customersError } = await supabase
-            .from('users')
+            .from('customers')
             .select('*')
-            .eq('role', 'customer')
             .order('created_at', { ascending: false })
             .limit(5);
         if(customersError) throw customersError;
@@ -120,7 +204,7 @@ const SuperAdminDashboard = () => {
         setRecentStaff(staffData);
 
         const { data: collectionsData, error: collectionsError } = await supabase
-            .from('receipts')
+            .from('collections')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(5);
@@ -194,8 +278,9 @@ const SuperAdminDashboard = () => {
               <p className="text-sm font-medium">Total Customers</p>
               <UsersIcon className="h-5 w-5" />
             </div>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-              {stats?.customerCount ?? '...'}
+            <div className="mt-2 flex items-baseline space-x-2">
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.customerCount ?? '...'}</p>
+                {stats && <TrendIndicator value={stats.customerCountChange} />}
             </div>
           </div>
           <Link to="/super-admin/customers" className="mt-4 text-primary-600 hover:underline text-sm font-medium">View All Customers</Link>
@@ -203,8 +288,8 @@ const SuperAdminDashboard = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-gray-500 dark:text-gray-400">
-              <p className="text-sm font-medium">Active Chit Groups</p>
-              <ClipboardDocumentListIcon className="h-5 w-5" />
+              <p className="text-sm font-medium">Active Groups</p>
+              <UserGroupIcon className="h-5 w-5" />
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
               {stats?.groupCount ?? '...'}
@@ -215,26 +300,25 @@ const SuperAdminDashboard = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-gray-500 dark:text-gray-400">
-              <p className="text-sm font-medium">Total Staff</p>
-              <UserGroupIcon className="h-5 w-5" />
+              <p className="text-sm font-medium">Collections This Month</p>
+              <CurrencyRupeeIcon className="h-5 w-5" />
             </div>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-              {stats?.staffCount ?? '...'}
+            <div className="mt-2 flex items-baseline space-x-2">
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(stats?.totalCollections ?? 0)}</p>
+                {stats && <TrendIndicator value={stats.totalCollectionsChange} />}
             </div>
           </div>
-          <Link to="/super-admin/staff" className="mt-4 text-primary-600 hover:underline text-sm font-medium">View All Staff</Link>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-gray-500 dark:text-gray-400">
-              <p className="text-sm font-medium">Total Collections</p>
-              <CurrencyRupeeIcon className="h-5 w-5" />
+              <p className="text-sm font-medium">Total Branches</p>
+              <BuildingOffice2Icon className="h-5 w-5" />
             </div>
             <div className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-              {stats ? formatCurrency(stats.totalCollections) : '...'}
+              {stats?.branchCount ?? '...'}
             </div>
           </div>
-          <Link to="/super-admin/collections" className="mt-4 text-primary-600 hover:underline text-sm font-medium">View Collections</Link>
         </div>
       </div>
 
@@ -284,36 +368,34 @@ const SuperAdminDashboard = () => {
             <Link to="/super-admin/groups/new" className="px-3 py-1 bg-primary-600 text-white rounded-md text-xs font-medium hover:bg-primary-700">Add Group</Link>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Group Name</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Value</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="relative px-4 py-3">
-                    <span className="sr-only">View</span>
-                  </th>
+            <RecentActivityTable
+              title="Recent Groups"
+              headers={['Group Name', 'Value', 'Status']}
+              items={recentGroups}
+              viewAllLink="/super-admin/groups"
+              renderRow={(group: ChitGroup) => (
+                <tr key={group.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{group.group_name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatCurrency(group.chit_value)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      group.status === 'active' ? 'bg-green-100 text-green-800' : 
+                      group.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {group.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Link to={`/super-admin/groups/${group.id}`} className="text-primary-600 hover:text-primary-900">
+                      View
+                    </Link>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {recentGroups.map((group) => (
-                    <tr key={group.id}>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{group.group_name}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatCurrency(group.chit_value)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">
-                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                group.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                                {group.status}
-                            </span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                            <Link to={`/super-admin/groups/${group.id}`} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200">View</Link>
-                        </td>
-                    </tr>
-                ))}
-              </tbody>
-            </table>
+              )}
+            />
           </div>
         </div>
       </div>
@@ -362,30 +444,27 @@ const SuperAdminDashboard = () => {
             <Link to="/super-admin/collections/new" className="px-3 py-1 bg-primary-600 text-white rounded-md text-xs font-medium hover:bg-primary-700">Add Collection</Link>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Customer</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Branch</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Amount</th>
-                  <th scope="col" className="relative px-4 py-3">
-                    <span className="sr-only">View</span>
-                  </th>
+            <RecentActivityTable
+              title="Recent Collections"
+              headers={['Customer', 'Amount', 'Date']}
+              items={recentCollections}
+              viewAllLink="/super-admin/collections"
+              renderRow={(collection: RecentReceipt) => (
+                <tr key={collection.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{collection.customer_name}</div>
+                    <div className="text-sm text-gray-500">{collection.branch_name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(collection.amount)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{new Date(collection.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Link to={`/super-admin/collections/${collection.id}`} className="text-primary-600 hover:text-primary-900">
+                      View
+                    </Link>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {recentCollections.map((collection) => (
-                    <tr key={collection.id}>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{collection.customer_name}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{collection.branch_name}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatCurrency(collection.amount)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                           <Link to={`/super-admin/collections/${collection.id}`} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200">View</Link>
-                        </td>
-                    </tr>
-                ))}
-              </tbody>
-            </table>
+              )}
+            />
           </div>
         </div>
       </div>

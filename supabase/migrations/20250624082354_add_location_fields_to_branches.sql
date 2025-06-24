@@ -1,0 +1,7 @@
+ALTER TABLE "public"."branches"
+ADD COLUMN "state" VARCHAR(255) DEFAULT 'Telangana' NOT NULL,
+ADD COLUMN "district" VARCHAR(255),
+ADD COLUMN "mandal" VARCHAR(255),
+ADD COLUMN "village" VARCHAR(255),
+ADD COLUMN "pincode" VARCHAR(10);
+

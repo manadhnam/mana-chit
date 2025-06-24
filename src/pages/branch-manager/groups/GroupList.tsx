@@ -15,40 +15,50 @@ import { useAuthStore } from '@/store/authStore';
 import { supabase } from '@/lib/supabase';
 import { ChitGroup, ChitGroupStatus } from '@/types/database';
 import { useDebounce } from '@/hooks/useDebounce';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatDate } from '@/utils/formatters';
+
+// Define a type for our enriched group data
+type EnrichedChitGroup = ChitGroup & { member_count: number };
 
 const GroupList = () => {
   const { user } = useAuthStore();
-  const [groups, setGroups] = useState<ChitGroup[]>([]);
+  const [groups, setGroups] = useState<EnrichedChitGroup[]>([]);
   const [stats, setStats] = useState({ total: 0, active: 0, pending: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
 
   const fetchGroupsAndStats = useCallback(async () => {
-    if (!user?.branchId) return;
+    if (!user?.branch_id) return;
     setLoading(true);
     
     try {
         let query = supabase
             .from('chit_groups')
             .select('*', { count: 'exact' })
-            .eq('branch_id', user.branchId);
+            .eq('branch_id', user.branch_id);
 
         if (debouncedSearch) {
             query = query.ilike('group_name', `%${debouncedSearch}%`);
         }
 
-        const { data, error, count } = await query.order('created_at', { ascending: false });
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        setGroups(data || []);
+        // For now, use current_cycle as a placeholder for member count
+        // TODO: Implement proper member count fetching
+        const enrichedGroups = (data || []).map(group => ({
+            ...group,
+            member_count: group.current_cycle || 0
+        }));
+
+        setGroups(enrichedGroups);
         
-        // Fetch stats separately for an accurate total count regardless of search
-        const { count: totalCount } = await supabase.from('chit_groups').select('*', { count: 'exact', head: true }).eq('branch_id', user.branchId);
-        const { count: activeCount } = await supabase.from('chit_groups').select('*', { count: 'exact', head: true }).eq('branch_id', user.branchId).eq('status', 'active');
-        const { count: pendingCount } = await supabase.from('chit_groups').select('*', { count: 'exact', head: true }).eq('branch_id', user.branchId).eq('status', 'pending');
+        // Stats can still be fetched separately for simplicity and accuracy
+        const { count: totalCount } = await supabase.from('chit_groups').select('*', { count: 'exact', head: true }).eq('branch_id', user.branch_id);
+        const { count: activeCount } = await supabase.from('chit_groups').select('*', { count: 'exact', head: true }).eq('branch_id', user.branch_id).eq('status', 'active');
+        const { count: pendingCount } = await supabase.from('chit_groups').select('*', { count: 'exact', head: true }).eq('branch_id', user.branch_id).eq('status', 'pending');
 
         setStats({
             total: totalCount ?? 0,
@@ -61,7 +71,7 @@ const GroupList = () => {
     } finally {
         setLoading(false);
     }
-  }, [user?.branchId, debouncedSearch]);
+  }, [user?.branch_id, debouncedSearch]);
 
 
   useEffect(() => {
@@ -143,11 +153,13 @@ const GroupList = () => {
               <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
-                    <th scope="col" className="px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Name</th>
-                    <th scope="col" className="px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Amount</th>
+                    <th scope="col" className="px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Group</th>
+                    <th scope="col" className="px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Chit Value</th>
                     <th scope="col" className="px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Members</th>
+                    <th scope="col" className="px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Installment</th>
+                    <th scope="col" className="px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Start Date</th>
                     <th scope="col" className="px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Status</th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6"><span className="sr-only">Actions</span></th>
+                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6"><span className="sr-only">View</span></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
@@ -155,7 +167,9 @@ const GroupList = () => {
                     <tr key={g.id}>
                       <td className="whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-900 dark:text-white">{g.group_name}</td>
                       <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{formatCurrency(g.chit_value)}</td>
-                      <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{g.current_cycle}/{g.max_members}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{g.member_count}/{g.max_members}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{formatCurrency(g.max_members > 0 ? g.chit_value / g.max_members : 0)}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-500 dark:text-gray-300">{formatDate(g.start_date ?? '')}</td>
                       <td className="whitespace-nowrap px-4 py-4 text-sm">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           g.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
@@ -167,22 +181,9 @@ const GroupList = () => {
                         </span>
                       </td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                        <div className="flex items-center justify-end space-x-2">
-                          {g.status === 'pending' && (
-                            <>
-                              <button onClick={() => updateGroupStatus(g.id, 'active')} className="text-green-600 hover:text-green-900" title="Approve"><ShieldCheckIcon className="h-5 w-5" /></button>
-                              <button onClick={() => updateGroupStatus(g.id, 'cancelled')} className="text-red-600 hover:text-red-900" title="Reject"><XCircleIcon className="h-5 w-5" /></button>
-                            </>
-                          )}
-                           {g.status === 'active' && (
-                            <>
-                              <Link to={`/branch-manager/groups/${g.id}/members`} className="text-primary-600 hover:text-primary-900" title="View Members"><UserGroupIcon className="h-5 w-5" /></Link>
-                              <Link to={`/branch-manager/groups/${g.id}/auctions`} className="text-primary-600 hover:text-primary-900" title="Manage Auctions"><CurrencyRupeeIcon className="h-5 w-5" /></Link>
-                              <button onClick={() => toast.success('Notified Mandal Head!')} className="text-primary-600 hover:text-primary-900" title="Notify Mandal"><PaperAirplaneIcon className="h-5 w-5" /></button>
-                            </>
-                          )}
-                          <Link to={`/branch-manager/groups/${g.id}`} className="text-primary-600 hover:text-primary-900" title="View Details"><EyeIcon className="h-5 w-5" /></Link>
-                        </div>
+                        <Link to={`/branch-manager/groups/${g.id}`} className="text-primary-600 hover:text-primary-900" title="View Details">
+                          View
+                        </Link>
                       </td>
                     </tr>
                   ))}

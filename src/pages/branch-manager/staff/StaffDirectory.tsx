@@ -40,12 +40,12 @@ const StaffDirectory = () => {
   const [search, setSearch] = useState('');
 
   const fetchStaff = async () => {
-    if (!user?.branchId) return;
+    if (!user?.branch_id) return;
 
     setLoading(true);
     // In a real app, you'd fetch staff associated with the branch manager's branch
     // For now, we continue using mock data and add a pending user.
-    // const { data, error } = await supabase.from('staff').select('*').eq('branch_id', user.branchId);
+    // const { data, error } = await supabase.from('staff').select('*').eq('branch_id', user.branch_id);
     
     // Simulating API call
     setTimeout(() => {

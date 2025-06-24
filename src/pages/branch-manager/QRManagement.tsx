@@ -40,7 +40,7 @@ const QRManagement = () => {
   });
 
   const assignedToValue = watch('assigned_to');
-  const branchId = useMemo(() => user?.branchId, [user]);
+  const branchId = useMemo(() => user?.branch_id, [user]);
 
   const fetchData = async () => {
     if (!branchId) {

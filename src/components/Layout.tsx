@@ -33,6 +33,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import NotificationDropdown from './notifications/NotificationDropdown';
 import { toast } from 'react-hot-toast';
 import { sessionManager } from '@/utils/sessionManager';
+import RoleBasedSidebar from './RoleBasedSidebar';
 
 interface NavigationItem {
   name: string;
@@ -277,77 +278,7 @@ const Layout = () => {
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
-      <motion.div
-        initial={{ width: isSidebarOpen ? 280 : 80 }}
-        animate={{ width: isSidebarOpen ? 280 : 80 }}
-        className="bg-white dark:bg-gray-800 shadow-lg"
-      >
-        <div className="flex flex-col h-full">
-          {/* Sidebar Header */}
-          <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white"
-            >
-              {isSidebarOpen ? (
-                <XMarkIcon className="h-6 w-6" />
-              ) : (
-                <Bars3Icon className="h-6 w-6" />
-              )}
-            </button>
-            {isSidebarOpen && (
-              <h1 className="text-xl font-bold text-gray-800 dark:text-white">Mana Chit</h1>
-            )}
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto p-4">
-            {navigation.map((item) => (
-              <div key={item.name}>
-                {item.action ? (
-                  <button
-                    onClick={item.action}
-                    className="w-full flex items-center px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  >
-                    {item.icon ? <item.icon className="w-5 h-5 mr-3" /> : null}
-                    {isSidebarOpen && <span>{item.name}</span>}
-                  </button>
-                ) : (
-                  <NavLink
-                    to={item.path || '#'}
-                    className={({ isActive }) =>
-                      `flex items-center px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ${
-                        isActive ? 'bg-gray-100 dark:bg-gray-700' : ''
-                      }`
-                    }
-                  >
-                    {item.icon ? <item.icon className="w-5 h-5 mr-3" /> : null}
-                    {isSidebarOpen && <span>{item.name}</span>}
-                  </NavLink>
-                )}
-                {item.subItems && isSidebarOpen && (
-                  <div className="ml-8 mt-2 space-y-2">
-                    {item.subItems.map((subItem) => (
-                      <NavLink
-                        key={subItem.path}
-                        to={subItem.path || '#'}
-                        className={({ isActive }) =>
-                          `flex items-center px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ${
-                            isActive ? 'bg-gray-100 dark:bg-gray-700' : ''
-                          }`
-                        }
-                      >
-                        {subItem.icon ? <subItem.icon className="w-4 h-4 mr-3" /> : null}
-                        <span>{subItem.name}</span>
-                      </NavLink>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </nav>
-        </div>
-      </motion.div>
+      <RoleBasedSidebar />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -376,9 +307,9 @@ const Layout = () => {
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                 >
-                  {user?.avatar ? (
+                  {user?.photo_url ? (
                     <img 
-                      src={user.avatar} 
+                      src={user.photo_url} 
                       alt={user.name} 
                       className="h-8 w-8 rounded-full"
                     />

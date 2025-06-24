@@ -61,7 +61,7 @@ const GroupMembers = () => {
   }, [fetchMembers]);
 
   const openAddMemberModal = async () => {
-    if (!authUser?.branchId) {
+    if (!authUser?.branch_id) {
       toast.error('Branch information not found.');
       return;
     }
@@ -71,7 +71,7 @@ const GroupMembers = () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('branch_id', authUser.branchId)
+        .eq('branch_id', authUser.branch_id)
         .eq('role', 'user');
 
       if (error) throw error;

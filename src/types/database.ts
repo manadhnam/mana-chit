@@ -6,6 +6,7 @@ export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 export type UserStatus = 'pending' | 'active' | 'inactive' | 'suspended' | 'rejected';
 export type TransactionType = 'loan_repayment' | 'chit_contribution' | 'wallet_deposit' | 'wallet_withdrawal' | 'referral_bonus' | 'loan_disbursement' | 'chit_payout';
 
+// Base User interface with snake_case properties (as stored in database)
 export interface User {
   id: string;
   name: string;
@@ -21,8 +22,26 @@ export interface User {
   id_proof_verified: boolean;
   wallet_balance: number;
   referral_code?: string;
+  photo_url?: string;
   created_at: string;
   updated_at: string;
+}
+
+// Utility type to convert snake_case to camelCase for frontend use
+export type CamelCaseKeys<T> = {
+  [K in keyof T as K extends string
+    ? K extends `${infer F}_${infer R}`
+      ? `${F}${Capitalize<R>}`
+      : K
+    : K]: T[K];
+};
+
+// Frontend User type with camelCase properties
+export type UserWithCamelCase = CamelCaseKeys<User>;
+
+// Type guard to check if user has department access
+export function hasDepartmentAccess(user: User): user is User & { department_id: string } {
+  return user.role === 'departmentHead' && !!user.department_id;
 }
 
 export interface Branch {
@@ -245,6 +264,8 @@ export interface Customer {
   code: string;
   status: 'active' | 'inactive' | 'pending' | 'rejected';
   branch_id: string;
+  id_proof_url?: string;
+  photo_url?: string;
   created_at: string;
   updated_at: string;
 }

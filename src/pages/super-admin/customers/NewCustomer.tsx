@@ -40,7 +40,7 @@ const NewCustomer = () => {
   useEffect(() => {
     const fetchBranches = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from('branches').select('id, name').eq('status', 'active');
+      const { data, error } = await supabase.from('branches').select('id, name');
       if (error) {
         toast.error('Failed to load branches.');
         console.error('Error fetching branches:', error);

@@ -63,14 +63,14 @@ const BranchDashboard = () => {
 
   useEffect(() => {
     const fetchBranchData = async () => {
-      if (!user?.branchId) {
+      if (!user?.branch_id) {
         toast.error("Branch information not found. Please log in again.");
         setIsLoading(false);
         return;
       }
       setIsLoading(true);
       try {
-        const branchId = user.branchId;
+        const branchId = user.branch_id;
 
         // Fetch all data in parallel
         const [
